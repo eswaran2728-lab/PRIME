@@ -1,0 +1,42 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer Shield / Hex Crest -->
+    <path
+        android:pathData="M54,26 L76,38 L76,68 L54,82 L32,68 L32,38 Z"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FFD4AF37"
+        android:fillColor="#1AFFFFFF" />
+    
+    <!-- Bold Stylized P Monogram / Apex Delta -->
+    <path
+        android:pathData="M44,40 L60,40 C65.5,40 68,43.5 68,48 C68,52.5 65.5,56 60,56 L44,56 Z"
+        android:strokeWidth="0"
+        android:fillType="nonZero">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="44"
+                android:startY="40"
+                android:endX="68"
+                android:endY="56"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#FFFFE28A" />
+                <item android:offset="1.0" android:color="#FFD4AF37" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M42,40 L48,40 L48,70 L42,70 Z"
+        android:fillColor="#FFFFFFFF" />
+    <path
+        android:pathData="M48,46 L59,46 C61.5,46 62.5,47.2 62.5,48 C62.5,48.8 61.5,50 59,50 L48,50 Z"
+        android:fillColor="#FF12141A" />
+    
+    <!-- Ascending Apex Arrow / Diamond -->
+    <path
+        android:pathData="M54,30 L58,36 L50,36 Z"
+        android:fillColor="#FFFFD700" />
+</vector>

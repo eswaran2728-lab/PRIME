@@ -1,0 +1,8 @@
+{
+  "name": "Remix PRIME",
+  "description": "Personal operating system for total self-mastery: workout, nutrition, habits, time-blocking, body tracking, and PRIME score.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
