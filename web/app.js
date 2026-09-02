@@ -9,6 +9,8 @@ const defaultState = () => ({
   blocks: [],     // {id, date, title, start, end, category}
   body: [],       // {id, date, weightKg, waistCm}
   chat: [],       // {role: "user"|"assistant", text}
+  profile: null,  // {heightCm, weightKg, age, gender, activityLevel, goalCalories}
+  workoutPlan: null, // {goal, days: {Mon:[{exercise,sets,reps}], ...}}
 });
 
 function loadState() {
@@ -90,6 +92,7 @@ function render() {
     planner: renderPlanner,
     body: renderBody,
     coach: renderCoach,
+    profile: renderProfile,
   };
   view.innerHTML = "";
   renderers[activeTab]();
@@ -158,9 +161,19 @@ function inLast7(dateStr) {
 }
 
 // ---------- Workout ----------
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+let planPending = false;
+let selectedPlanDays = new Set();
+
 function renderWorkout() {
   view.appendChild(el("h1", { class: "page-title" }, "Workout"));
-  view.appendChild(el("p", { class: "page-sub" }, "Log your training sessions."));
+  view.appendChild(el("p", { class: "page-sub" }, "Log your training sessions, or let AI build your week."));
+
+  view.appendChild(renderPlanGenerator());
+  if (state.workoutPlan) view.appendChild(renderPlanDisplay());
+
+  const sectionHead = el("div", { class: "section-head" }, el("h2", {}, "Manual log"));
+  view.appendChild(sectionHead);
 
   const exercise = el("input", { placeholder: "Exercise (e.g. Bench Press)" });
   const sets = el("input", { placeholder: "Sets", type: "number" });
@@ -194,10 +207,133 @@ function renderWorkout() {
   view.appendChild(list);
 }
 
+function renderPlanGenerator() {
+  const card = el("div", { class: "card section" });
+  card.appendChild(el("h3", {}, "AI workout plan"));
+  card.appendChild(el("p", { class: "dim" }, "Pick the days you can train and your goal — AI builds the week."));
+
+  const dayRow = el("div", { class: "form-row" });
+  for (const d of WEEKDAYS) {
+    const btn = el("button", {
+      class: `btn-ghost ${selectedPlanDays.has(d) ? "active" : ""}`,
+      style: selectedPlanDays.has(d) ? "border-color:#ff5a3c;color:#f2f4f7" : "",
+      onclick: () => {
+        if (selectedPlanDays.has(d)) selectedPlanDays.delete(d); else selectedPlanDays.add(d);
+        render();
+      },
+    }, d);
+    dayRow.appendChild(btn);
+  }
+  card.appendChild(dayRow);
+
+  const goal = el("input", { placeholder: "Goal (e.g. build muscle, lose fat, strength)" });
+  const genBtn = el("button", { class: "btn", onclick: async () => {
+    if (!selectedPlanDays.size) return;
+    planPending = true; render();
+    try {
+      const resp = await fetch("/api/plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          days: WEEKDAYS.filter(d => selectedPlanDays.has(d)),
+          goal: goal.value.trim() || "general fitness",
+          profile: state.profile,
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Request failed");
+      state.workoutPlan = { goal: goal.value.trim() || "general fitness", days: data.plan };
+      saveState();
+    } catch (err) {
+      alert("Couldn't generate plan: " + err.message);
+    } finally {
+      planPending = false; render();
+    }
+  }}, planPending ? "Generating..." : "Generate plan with AI");
+
+  card.appendChild(el("div", { class: "form-row" }, [goal, genBtn]));
+  return card;
+}
+
+function renderPlanDisplay() {
+  const card = el("div", { class: "card section" });
+  card.appendChild(el("h3", {}, `This week's plan — ${state.workoutPlan.goal}`));
+
+  const todayIdx = (new Date().getDay() + 6) % 7; // Mon=0
+  const todayKey = WEEKDAYS[todayIdx];
+
+  for (const day of WEEKDAYS) {
+    const exercises = state.workoutPlan.days?.[day];
+    if (!exercises || !exercises.length) continue;
+    const row = el("div", { class: "list-item" }, [
+      el("div", { class: "li-main" }, [
+        el("div", { class: "li-title" }, day + (day === todayKey ? " (today)" : "")),
+        el("div", { class: "li-sub" }, exercises.map(e => `${e.exercise} ${e.sets}×${e.reps}`).join(", ")),
+      ]),
+      el("div", { class: "li-actions" }, el("button", { class: "btn-ghost", onclick: () => {
+        for (const e of exercises) {
+          state.workouts.unshift({ id: uid(), date: todayStr(), exercise: e.exercise, sets: e.sets, reps: e.reps, weightKg: 0 });
+        }
+        saveState(); render();
+      }}, "Log to today")),
+    ]);
+    card.appendChild(row);
+  }
+  return card;
+}
+
 // ---------- Nutrition ----------
+let foodPending = false;
+
 function renderNutrition() {
   view.appendChild(el("h1", { class: "page-title" }, "Nutrition"));
-  view.appendChild(el("p", { class: "page-sub" }, "Log meals and macros."));
+  view.appendChild(el("p", { class: "page-sub" }, "Log meals manually, or snap a photo and let AI estimate calories."));
+
+  const goalCal = state.profile?.goalCalories;
+  const todayCals = state.nutrition.filter(n => n.date === todayStr()).reduce((s, n) => s + n.calories, 0);
+  if (goalCal) {
+    const pct = Math.min(100, Math.round((todayCals / goalCal) * 100));
+    const goalCard = el("div", { class: "card section" }, [
+      el("h3", {}, "Today's calories"),
+      el("div", { class: "big" }, `${todayCals} / ${goalCal} kcal`),
+      el("div", { class: "bar-track" }, el("div", { class: "bar-fill", style: `width:${pct}%` })),
+    ]);
+    view.appendChild(goalCard);
+  } else {
+    view.appendChild(el("div", { class: "empty" }, "Set your height/weight/age in Profile to get a personalized goal calorie target."));
+  }
+
+  const photoCard = el("div", { class: "card section" });
+  photoCard.appendChild(el("h3", {}, "Snap a meal photo"));
+  const fileInput = el("input", { type: "file", accept: "image/*", capture: "environment" });
+  const status = el("div", { class: "chat-error" });
+  fileInput.addEventListener("change", async () => {
+    const file = fileInput.files?.[0];
+    if (!file) return;
+    foodPending = true;
+    status.textContent = "Analyzing photo...";
+    try {
+      const base64 = await fileToBase64(file);
+      const resp = await fetch("/api/food", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ imageBase64: base64, mimeType: file.type || "image/jpeg" }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Request failed");
+      state.nutrition.unshift({ id: uid(), date: todayStr(), food: data.food,
+        calories: data.calories, protein: data.protein, carbs: data.carbs, fat: data.fat });
+      saveState();
+      status.textContent = "";
+    } catch (err) {
+      status.textContent = "Couldn't analyze photo: " + err.message;
+    } finally {
+      foodPending = false; render();
+    }
+  });
+  photoCard.appendChild(el("div", { class: "form-row" }, fileInput));
+  photoCard.appendChild(status);
+  view.appendChild(photoCard);
 
   const food = el("input", { placeholder: "Food (e.g. Chicken & rice)" });
   const calories = el("input", { placeholder: "Calories", type: "number" });
@@ -219,7 +355,7 @@ function renderNutrition() {
       list.appendChild(el("div", { class: "list-item" }, [
         el("div", { class: "li-main" }, [
           el("div", { class: "li-title" }, n.food),
-          el("div", { class: "li-sub" }, `${n.calories} kcal · ${n.protein}g protein · ${n.date}`),
+          el("div", { class: "li-sub" }, `${n.calories} kcal · ${n.protein}g protein${n.carbs != null ? ` · ${n.carbs}g carbs · ${n.fat}g fat` : ""} · ${n.date}`),
         ]),
         el("div", { class: "li-actions" }, el("button", { class: "btn-ghost", onclick: () => {
           state.nutrition = state.nutrition.filter(x => x.id !== n.id); saveState(); render();
@@ -228,6 +364,15 @@ function renderNutrition() {
     }
   }
   view.appendChild(list);
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 // ---------- Habits ----------
@@ -350,12 +495,89 @@ function renderBody() {
   view.appendChild(list);
 }
 
+// ---------- Profile & goal calories ----------
+const ACTIVITY_MULTIPLIERS = {
+  sedentary: 1.2, light: 1.375, moderate: 1.55, active: 1.725, veryActive: 1.9,
+};
+
+function computeGoalCalories(p) {
+  if (!p || !p.heightCm || !p.weightKg || !p.age) return null;
+  const bmr = p.gender === "female"
+    ? 10 * p.weightKg + 6.25 * p.heightCm - 5 * p.age - 161
+    : 10 * p.weightKg + 6.25 * p.heightCm - 5 * p.age + 5;
+  const mult = ACTIVITY_MULTIPLIERS[p.activityLevel] || 1.375;
+  return Math.round(bmr * mult);
+}
+
+function computeBmi(p) {
+  if (!p || !p.heightCm || !p.weightKg) return null;
+  const m = p.heightCm / 100;
+  return Math.round((p.weightKg / (m * m)) * 10) / 10;
+}
+
+function renderProfile() {
+  view.appendChild(el("h1", { class: "page-title" }, "Profile"));
+  view.appendChild(el("p", { class: "page-sub" }, "Used to calculate your BMI and daily goal calories — the AI coach and nutrition tracker use this."));
+
+  const p = state.profile || {};
+  const height = el("input", { placeholder: "Height (cm)", type: "number", value: p.heightCm || "" });
+  const weight = el("input", { placeholder: "Weight (kg)", type: "number", value: p.weightKg || "" });
+  const age = el("input", { placeholder: "Age", type: "number", value: p.age || "" });
+  const gender = el("select", {}, [
+    el("option", { value: "male" }, "Male"),
+    el("option", { value: "female" }, "Female"),
+  ]);
+  gender.value = p.gender || "male";
+  const activity = el("select", {}, [
+    el("option", { value: "sedentary" }, "Sedentary (little exercise)"),
+    el("option", { value: "light" }, "Light (1-3 days/wk)"),
+    el("option", { value: "moderate" }, "Moderate (3-5 days/wk)"),
+    el("option", { value: "active" }, "Active (6-7 days/wk)"),
+    el("option", { value: "veryActive" }, "Very active (physical job/2x day)"),
+  ]);
+  activity.value = p.activityLevel || "light";
+
+  const saveBtn = el("button", { class: "btn", onclick: () => {
+    const profile = {
+      heightCm: Number(height.value) || 0,
+      weightKg: Number(weight.value) || 0,
+      age: Number(age.value) || 0,
+      gender: gender.value,
+      activityLevel: activity.value,
+    };
+    profile.goalCalories = computeGoalCalories(profile);
+    state.profile = profile;
+    saveState(); render();
+  }}, "Save profile");
+
+  view.appendChild(el("div", { class: "form-row" }, [height, weight, age, gender, activity]));
+  view.appendChild(el("div", { class: "form-row" }, saveBtn));
+
+  if (state.profile && state.profile.goalCalories) {
+    const bmi = computeBmi(state.profile);
+    view.appendChild(el("div", { class: "grid" }, [
+      statCard("BMI", String(bmi), bmiLabel(bmi)),
+      statCard("Goal calories", String(state.profile.goalCalories), "kcal/day (maintenance, from BMR × activity)"),
+    ]));
+  }
+}
+
+function bmiLabel(bmi) {
+  if (bmi == null) return "";
+  if (bmi < 18.5) return "Underweight";
+  if (bmi < 25) return "Normal";
+  if (bmi < 30) return "Overweight";
+  return "Obese";
+}
+
 // ---------- AI Coach ----------
 function buildContextSnapshot() {
   const { total, subs } = computeScore();
   return {
     primeScore: total,
     scoreBreakdown: subs,
+    profile: state.profile,
+    workoutPlan: state.workoutPlan,
     recentWorkouts: state.workouts.slice(0, 5),
     recentNutrition: state.nutrition.slice(0, 5),
     habits: state.habits.map(h => ({ name: h.name, streak: computeStreak(h) })),
