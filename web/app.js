@@ -3,12 +3,13 @@ const STORE_KEY = "prime.v1";
 const todayStr = () => new Date().toISOString().slice(0, 10);
 
 const defaultState = () => ({
-  workouts: [],   // {id, date, exercise, sets, reps, weightKg}
+  workouts: [],   // sessions: {id, date, exercises: [{name, sets: [{weightKg, reps, rpe}]}], durationMin}
   nutrition: [],  // {id, date, food, calories, protein}
   habits: [],     // {id, name, logs: {date: true}}
   blocks: [],     // {id, date, title, start, end, category}
   body: [],       // {id, date, weightKg, waistCm}
   chat: [],       // {role: "user"|"assistant", text}
+  activeSession: null, // {startedAt, exercises: [{name, sets: [{weightKg, reps, rpe, completed}]}]}
   profile: null,  // {heightCm, weightKg, age, gender, activityLevel, goalCalories, proteinGoal, carbsGoal, fatGoal, waterGoalMl}
   workoutPlan: null, // {goal, days: {Mon:[{exercise,sets,reps}], ...}}
   water: [],      // {id, date, amountMl}
@@ -19,7 +20,9 @@ function loadState() {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return defaultState();
     const parsed = JSON.parse(raw);
-    return { ...defaultState(), ...parsed };
+    const merged = { ...defaultState(), ...parsed };
+    merged.workouts = migrateWorkouts(merged.workouts);
+    return merged;
   } catch {
     return defaultState();
   }
@@ -29,8 +32,20 @@ function saveState() {
   localStorage.setItem(STORE_KEY, JSON.stringify(state));
 }
 
-let state = loadState();
+function migrateWorkouts(workouts) {
+  // Old flat entries {id,date,exercise,sets,reps,weightKg} -> session per date.
+  if (!workouts.some(w => !w.exercises)) return workouts;
+  const byDate = {};
+  for (const w of workouts) {
+    if (w.exercises) { (byDate[w.date] ??= { id: w.id, date: w.date, exercises: [] }).exercises.push(...w.exercises); continue; }
+    const session = (byDate[w.date] ??= { id: uid(), date: w.date, exercises: [] });
+    session.exercises.push({ name: w.exercise, sets: [{ weightKg: w.weightKg || 0, reps: w.reps || 0, rpe: null }] });
+  }
+  return Object.values(byDate).sort((a, b) => b.date.localeCompare(a.date));
+}
+
 const uid = () => Math.random().toString(36).slice(2, 10);
+let state = loadState();
 
 // ---------- PRIME score ----------
 // Simplified, deterministic sub-scores over the last 7 days, weighted to 100.
@@ -167,47 +182,236 @@ function inLast7(dateStr) {
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 let planPending = false;
 let selectedPlanDays = new Set();
+let exerciseSearchQuery = "";
+let restRemaining = 0;
+let restInterval = null;
+let progressExercise = null;
+
+function estOneRM(weightKg, reps) {
+  return Math.round(weightKg * (1 + reps / 30));
+}
+
+// All past sets for an exercise, oldest -> newest: {date, weightKg, reps}
+function exerciseHistory(name) {
+  const out = [];
+  for (const s of state.workouts) {
+    const ex = s.exercises.find(e => e.name === name);
+    if (ex) for (const set of ex.sets) out.push({ date: s.date, ...set });
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function bestSetLabel(name) {
+  const hist = exerciseHistory(name);
+  if (!hist.length) return null;
+  const last = hist[hist.length - 1];
+  return `Last: ${last.weightKg}kg × ${last.reps}`;
+}
+
+function exercisePR(name) {
+  const hist = exerciseHistory(name);
+  if (!hist.length) return 0;
+  return Math.max(...hist.map(s => estOneRM(s.weightKg, s.reps)));
+}
+
+function startSession(prefill) {
+  state.activeSession = {
+    startedAt: new Date().toISOString(),
+    exercises: prefill || [],
+  };
+  saveState();
+}
 
 function renderWorkout() {
   view.appendChild(el("h1", { class: "page-title" }, "Workout"));
-  view.appendChild(el("p", { class: "page-sub" }, "Log your training sessions, or let AI build your week."));
+  view.appendChild(el("p", { class: "page-sub" }, "Log sets like Strong — track weight, reps, PRs, and rest between sets."));
 
-  view.appendChild(renderPlanGenerator());
-  if (state.workoutPlan) view.appendChild(renderPlanDisplay());
-
-  const sectionHead = el("div", { class: "section-head" }, el("h2", {}, "Manual log"));
-  view.appendChild(sectionHead);
-
-  const exercise = el("input", { placeholder: "Exercise (e.g. Bench Press)" });
-  const sets = el("input", { placeholder: "Sets", type: "number" });
-  const reps = el("input", { placeholder: "Reps", type: "number" });
-  const weight = el("input", { placeholder: "Weight (kg)", type: "number" });
-  const addBtn = el("button", { class: "btn", onclick: () => {
-    if (!exercise.value.trim()) return;
-    state.workouts.unshift({ id: uid(), date: todayStr(), exercise: exercise.value.trim(),
-      sets: Number(sets.value) || 0, reps: Number(reps.value) || 0, weightKg: Number(weight.value) || 0 });
-    saveState(); render();
-  }}, "Add");
-
-  view.appendChild(el("div", { class: "form-row" }, [exercise, sets, reps, weight, addBtn]));
-
-  const list = el("div", { class: "list" });
-  if (!state.workouts.length) {
-    list.appendChild(el("div", { class: "empty" }, "No workouts logged yet."));
+  if (state.activeSession) {
+    view.appendChild(renderActiveSession());
   } else {
-    for (const w of state.workouts) {
-      list.appendChild(el("div", { class: "list-item" }, [
-        el("div", { class: "li-main" }, [
-          el("div", { class: "li-title" }, w.exercise),
-          el("div", { class: "li-sub" }, `${w.sets}×${w.reps} @ ${w.weightKg}kg · ${w.date}`),
-        ]),
-        el("div", { class: "li-actions" }, el("button", { class: "btn-ghost", onclick: () => {
-          state.workouts = state.workouts.filter(x => x.id !== w.id); saveState(); render();
-        }}, "Delete")),
+    view.appendChild(renderPlanGenerator());
+    if (state.workoutPlan) view.appendChild(renderPlanDisplay());
+    view.appendChild(renderStartWorkoutCard());
+  }
+
+  view.appendChild(renderExerciseProgress());
+  view.appendChild(renderWorkoutHistory());
+}
+
+function renderStartWorkoutCard() {
+  const card = el("div", { class: "card section" });
+  card.appendChild(el("h3", {}, "Start a workout"));
+  card.appendChild(el("button", { class: "btn", onclick: () => { startSession([]); render(); } }, "Start empty workout"));
+  return card;
+}
+
+function exercisePicker(onPick) {
+  const wrap = el("div", { class: "search-wrap" });
+  const input = el("input", { placeholder: "Search exercise (e.g. Squat, Bench)" });
+  const results = el("div", { class: "search-results" });
+  results.style.display = "none";
+  input.addEventListener("input", () => {
+    const q = input.value.trim().toLowerCase();
+    results.innerHTML = "";
+    if (!q) { results.style.display = "none"; return; }
+    const matches = (typeof EXERCISE_DB !== "undefined" ? EXERCISE_DB : [])
+      .filter(e => e.name.toLowerCase().includes(q)).slice(0, 8);
+    if (!matches.length) { results.style.display = "none"; return; }
+    for (const e of matches) {
+      results.appendChild(el("div", { class: "search-result-item", onclick: () => {
+        onPick(e.name); input.value = ""; results.style.display = "none"; render();
+      }}, [
+        el("div", { class: "search-result-name" }, e.name),
+        el("div", { class: "search-result-sub" }, e.group),
       ]));
     }
+    results.style.display = "block";
+  });
+  wrap.appendChild(input); wrap.appendChild(results);
+  return wrap;
+}
+
+function renderActiveSession() {
+  const s = state.activeSession;
+  const card = el("div", { class: "card section" });
+  const elapsedMin = Math.max(0, Math.round((Date.now() - new Date(s.startedAt).getTime()) / 60000));
+  card.appendChild(el("div", { class: "section-head" }, [
+    el("h3", {}, `Active workout · ${elapsedMin} min`),
+    el("button", { class: "btn", onclick: () => {
+      const totalSets = s.exercises.reduce((n, e) => n + e.sets.length, 0);
+      if (!totalSets) { state.activeSession = null; saveState(); render(); return; }
+      state.workouts.unshift({
+        id: uid(), date: todayStr(),
+        exercises: s.exercises.filter(e => e.sets.length),
+        durationMin: elapsedMin,
+      });
+      state.activeSession = null;
+      saveState(); render();
+    }}, "Finish workout"),
+  ]));
+
+  for (const ex of s.exercises) {
+    const exBlock = el("div", { class: "section" });
+    const last = bestSetLabel(ex.name);
+    exBlock.appendChild(el("div", { class: "section-head" }, [
+      el("h2", {}, ex.name),
+      last ? el("span", { class: "dim" }, last) : null,
+    ]));
+
+    const list = el("div", { class: "list" });
+    ex.sets.forEach((set, i) => {
+      const weight = el("input", { type: "number", value: set.weightKg, placeholder: "kg", style: "max-width:90px" });
+      const reps = el("input", { type: "number", value: set.reps, placeholder: "reps", style: "max-width:90px" });
+      const pr = exercisePR(ex.name);
+      const isPr = set.weightKg && set.reps && estOneRM(set.weightKg, set.reps) > pr && pr > 0;
+      weight.addEventListener("change", () => { set.weightKg = Number(weight.value) || 0; saveState(); });
+      reps.addEventListener("change", () => { set.reps = Number(reps.value) || 0; saveState(); });
+      list.appendChild(el("div", { class: "list-item" }, [
+        el("div", { class: "li-main" }, [
+          el("div", { class: "li-title" }, `Set ${i + 1}${isPr ? " 🏆 PR" : ""}`),
+        ]),
+        el("div", { class: "li-actions" }, [weight, el("span", { class: "dim" }, "×"), reps,
+          el("button", { class: "btn-ghost", onclick: () => {
+            ex.sets.splice(i, 1); saveState(); render();
+          }}, "Remove"),
+        ]),
+      ]));
+    });
+    exBlock.appendChild(list);
+    exBlock.appendChild(el("div", { class: "form-row" }, [
+      el("button", { class: "btn-ghost", onclick: () => {
+        const lastSet = ex.sets[ex.sets.length - 1];
+        ex.sets.push({ weightKg: lastSet?.weightKg || 0, reps: lastSet?.reps || 0, rpe: null });
+        saveState(); render();
+      }}, "+ Add set"),
+    ]));
+    card.appendChild(exBlock);
   }
-  view.appendChild(list);
+
+  card.appendChild(exercisePicker(name => {
+    s.exercises.push({ name, sets: [{ weightKg: 0, reps: 0, rpe: null }] });
+    saveState();
+  }));
+
+  card.appendChild(renderRestTimer());
+  return card;
+}
+
+function renderRestTimer() {
+  const wrap = el("div", { class: "card section" });
+  wrap.appendChild(el("h3", {}, "Rest timer"));
+  if (restRemaining > 0) {
+    wrap.appendChild(el("div", { class: "big" }, `${restRemaining}s`));
+  } else {
+    const row = el("div", { class: "water-row" });
+    for (const secs of [60, 90, 120, 180]) {
+      row.appendChild(el("button", { class: "water-btn", onclick: () => {
+        restRemaining = secs;
+        clearInterval(restInterval);
+        restInterval = setInterval(() => {
+          restRemaining -= 1;
+          if (restRemaining <= 0) { clearInterval(restInterval); restRemaining = 0; }
+          if (activeTab === "workout") render();
+        }, 1000);
+        render();
+      }}, `${secs}s`));
+    }
+    wrap.appendChild(row);
+  }
+  return wrap;
+}
+
+function renderExerciseProgress() {
+  const card = el("div", { class: "card section" });
+  card.appendChild(el("h3", {}, "Exercise progress"));
+  const names = [...new Set(state.workouts.flatMap(s => s.exercises.map(e => e.name)))];
+  if (!names.length) {
+    card.appendChild(el("div", { class: "empty" }, "Log a workout to see progress charts here."));
+    return card;
+  }
+  if (!progressExercise || !names.includes(progressExercise)) progressExercise = names[0];
+  const select = el("select", {}, names.map(n => el("option", { value: n }, n)));
+  select.value = progressExercise;
+  select.addEventListener("change", () => { progressExercise = select.value; render(); });
+  card.appendChild(el("div", { class: "form-row" }, select));
+
+  const hist = exerciseHistory(progressExercise);
+  const byDate = {};
+  for (const h of hist) {
+    const rm = estOneRM(h.weightKg, h.reps);
+    byDate[h.date] = Math.max(byDate[h.date] || 0, rm);
+  }
+  const points = Object.keys(byDate).sort().map(d => ({ v: byDate[d] }));
+  const canvas = el("canvas", { class: "chart" });
+  card.appendChild(canvas);
+  card.appendChild(el("div", { class: "dim" }, `Estimated 1RM (Epley formula) · PR: ${exercisePR(progressExercise)}kg`));
+  requestAnimationFrame(() => drawLineChart(canvas, points, "#ff5a3c"));
+  return card;
+}
+
+function renderWorkoutHistory() {
+  const card = el("div", { class: "section" });
+  card.appendChild(el("div", { class: "section-head" }, el("h2", {}, "History")));
+  if (!state.workouts.length) {
+    card.appendChild(el("div", { class: "empty" }, "No workouts logged yet."));
+    return card;
+  }
+  const list = el("div", { class: "list" });
+  for (const s of state.workouts) {
+    const volume = s.exercises.reduce((v, e) => v + e.sets.reduce((sv, set) => sv + set.weightKg * set.reps, 0), 0);
+    const setCount = s.exercises.reduce((n, e) => n + e.sets.length, 0);
+    list.appendChild(el("div", { class: "list-item" }, [
+      el("div", { class: "li-main" }, [
+        el("div", { class: "li-title" }, `${s.date} · ${s.exercises.length} exercises`),
+        el("div", { class: "li-sub" }, `${setCount} sets · ${Math.round(volume)}kg total volume${s.durationMin ? ` · ${s.durationMin} min` : ""}`),
+      ]),
+      el("div", { class: "li-actions" }, el("button", { class: "btn-ghost", onclick: () => {
+        state.workouts = state.workouts.filter(x => x.id !== s.id); saveState(); render();
+      }}, "Delete")),
+    ]));
+  }
+  card.appendChild(list);
+  return card;
 }
 
 function renderPlanGenerator() {
@@ -274,11 +478,12 @@ function renderPlanDisplay() {
         el("div", { class: "li-sub" }, exercises.map(e => `${e.exercise} ${e.sets}×${e.reps}`).join(", ")),
       ]),
       el("div", { class: "li-actions" }, el("button", { class: "btn-ghost", onclick: () => {
-        for (const e of exercises) {
-          state.workouts.unshift({ id: uid(), date: todayStr(), exercise: e.exercise, sets: e.sets, reps: e.reps, weightKg: 0 });
-        }
-        saveState(); render();
-      }}, "Log to today")),
+        startSession(exercises.map(e => ({
+          name: e.exercise,
+          sets: Array.from({ length: e.sets || 1 }, () => ({ weightKg: 0, reps: e.reps || 0, rpe: null })),
+        })));
+        render();
+      }}, "Start this workout")),
     ]);
     card.appendChild(row);
   }
