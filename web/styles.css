@@ -134,6 +134,7 @@ button.btn-ghost:hover { color: var(--text); border-color: var(--text-dim); }
 .msg.user { align-self: flex-end; background: linear-gradient(90deg, var(--accent), var(--accent-2)); color: #1a0f0a; }
 .msg.assistant { align-self: flex-start; background: var(--bg-alt); border: 1px solid var(--border); }
 .msg.pending { color: var(--text-dim); font-style: italic; }
+.msg.system { align-self: center; background: rgba(61, 220, 151, 0.12); border: 1px solid var(--green); color: var(--green); font-size: 12px; padding: 6px 12px; }
 .chat-input-row { display: flex; gap: 10px; }
 .chat-input-row input { flex: 1; }
 .chat-error { color: var(--accent); font-size: 13px; margin-top: 8px; }

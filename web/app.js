@@ -1041,14 +1041,56 @@ function buildContextSnapshot() {
 
 let coachPending = false;
 
+function applyCoachAction(action) {
+  const a = action.args || {};
+  switch (action.name) {
+    case "log_workout_set": {
+      let session = state.workouts.find(s => s.date === todayStr());
+      if (!session) { session = { id: uid(), date: todayStr(), exercises: [] }; state.workouts.unshift(session); }
+      let ex = session.exercises.find(e => e.name.toLowerCase() === String(a.exercise || "").toLowerCase());
+      if (!ex) { ex = { name: a.exercise || "Exercise", sets: [] }; session.exercises.push(ex); }
+      ex.sets.push({ weightKg: Number(a.weightKg) || 0, reps: Number(a.reps) || 0, rpe: null });
+      return `Logged ${a.exercise}: ${a.weightKg || 0}kg × ${a.reps || 0}`;
+    }
+    case "log_meal": {
+      state.nutrition.unshift({
+        id: uid(), date: todayStr(), mealType: a.mealType || "snack", food: a.food || "Meal",
+        calories: Number(a.calories) || 0, protein: Number(a.protein) || 0,
+        carbs: Number(a.carbs) || 0, fat: Number(a.fat) || 0,
+      });
+      return `Logged meal: ${a.food} (${a.calories || 0} kcal)`;
+    }
+    case "log_water": {
+      state.water.unshift({ id: uid(), date: todayStr(), amountMl: Number(a.amountMl) || 0 });
+      return `Logged ${a.amountMl}ml water`;
+    }
+    case "toggle_habit": {
+      let habit = state.habits.find(h => h.name.toLowerCase() === String(a.name || "").toLowerCase());
+      if (!habit) { habit = { id: uid(), name: a.name || "Habit", logs: {} }; state.habits.unshift(habit); }
+      habit.logs[todayStr()] = a.done !== false;
+      return `${a.done !== false ? "Checked off" : "Un-checked"} habit: ${a.name}`;
+    }
+    case "log_body_measurement": {
+      state.body.unshift({ id: uid(), date: todayStr(), weightKg: Number(a.weightKg) || 0, waistCm: Number(a.waistCm) || 0 });
+      return `Logged body: ${a.weightKg}kg`;
+    }
+    case "add_time_block": {
+      state.blocks.unshift({ id: uid(), date: todayStr(), title: a.title || "Block", start: a.start || "--:--", end: a.end || "--:--" });
+      return `Added time block: ${a.title}`;
+    }
+    default:
+      return null;
+  }
+}
+
 function renderCoach() {
   view.appendChild(el("h1", { class: "page-title" }, "AI Coach"));
-  view.appendChild(el("p", { class: "page-sub" }, "Ask anything — your coach sees your logged data and personalizes its advice."));
+  view.appendChild(el("p", { class: "page-sub" }, "Ask anything, or just tell it what you did — it can log workouts, meals, water, habits, and more for you."));
 
   const windowEl = el("div", { class: "chat-window", id: "chatWindow" });
   if (!state.chat.length) {
     windowEl.appendChild(el("div", { class: "msg assistant" },
-      "Hey — I'm your PRIME coach. Ask me about your training, nutrition, habits, or what to focus on today."));
+      "Hey — I'm your PRIME coach. Try: \"I did 3 sets of squats at 80kg for 8 reps\", \"log a banana\", or \"mark meditation done\" — I'll log it and reply."));
   }
   for (const m of state.chat) {
     windowEl.appendChild(el("div", { class: `msg ${m.role}` }, m.text));
@@ -1082,12 +1124,16 @@ function renderCoach() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: text,
-          history: state.chat.slice(0, -1).map(m => ({ role: m.role, text: m.text })),
+          history: state.chat.slice(0, -1).filter(m => m.role !== "system").map(m => ({ role: m.role, text: m.text })),
           context: buildContextSnapshot(),
         }),
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Request failed");
+      for (const action of data.actions || []) {
+        const summary = applyCoachAction(action);
+        if (summary) state.chat.push({ role: "system", text: `✓ ${summary}` });
+      }
       state.chat.push({ role: "assistant", text: data.reply || "(no response)" });
     } catch (err) {
       const errEl = document.getElementById("chatError");
