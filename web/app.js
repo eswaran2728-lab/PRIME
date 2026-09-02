@@ -9,8 +9,9 @@ const defaultState = () => ({
   blocks: [],     // {id, date, title, start, end, category}
   body: [],       // {id, date, weightKg, waistCm}
   chat: [],       // {role: "user"|"assistant", text}
-  profile: null,  // {heightCm, weightKg, age, gender, activityLevel, goalCalories}
+  profile: null,  // {heightCm, weightKg, age, gender, activityLevel, goalCalories, proteinGoal, carbsGoal, fatGoal, waterGoalMl}
   workoutPlan: null, // {goal, days: {Mon:[{exercise,sets,reps}], ...}}
+  water: [],      // {id, date, amountMl}
 });
 
 function loadState() {
@@ -33,9 +34,10 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 
 // ---------- PRIME score ----------
 // Simplified, deterministic sub-scores over the last 7 days, weighted to 100.
-function computeScore() {
+function computeScore(endDate) {
+  const end = endDate ? new Date(endDate) : new Date();
   const days = [...Array(7)].map((_, i) => {
-    const d = new Date();
+    const d = new Date(end);
     d.setDate(d.getDate() - i);
     return d.toISOString().slice(0, 10);
   });
@@ -93,6 +95,7 @@ function render() {
     body: renderBody,
     coach: renderCoach,
     profile: renderProfile,
+    progress: renderProgress,
   };
   view.innerHTML = "";
   renderers[activeTab]();
@@ -284,27 +287,166 @@ function renderPlanDisplay() {
 
 // ---------- Nutrition ----------
 let foodPending = false;
+let selectedMealType = "breakfast";
+let pendingFoodEntry = null; // {name, calories, protein, carbs, fat} chosen from search, awaiting quantity confirm
+const MEAL_TYPES = ["breakfast", "lunch", "dinner", "snack"];
+const MEAL_LABELS = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", snack: "Snack" };
+
+function todayTotals() {
+  const entries = state.nutrition.filter(n => n.date === todayStr());
+  return entries.reduce((acc, n) => {
+    acc.calories += n.calories || 0;
+    acc.protein += n.protein || 0;
+    acc.carbs += n.carbs || 0;
+    acc.fat += n.fat || 0;
+    return acc;
+  }, { calories: 0, protein: 0, carbs: 0, fat: 0 });
+}
+
+function ringSvg(pct, color, size = 64) {
+  const r = (size - 8) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - Math.min(1, pct) * c;
+  const svgNs = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNs, "svg");
+  svg.setAttribute("width", size); svg.setAttribute("height", size);
+  const bg = document.createElementNS(svgNs, "circle");
+  bg.setAttribute("cx", size / 2); bg.setAttribute("cy", size / 2); bg.setAttribute("r", r);
+  bg.setAttribute("fill", "none"); bg.setAttribute("stroke", "#232833"); bg.setAttribute("stroke-width", 6);
+  const fg = document.createElementNS(svgNs, "circle");
+  fg.setAttribute("cx", size / 2); fg.setAttribute("cy", size / 2); fg.setAttribute("r", r);
+  fg.setAttribute("fill", "none"); fg.setAttribute("stroke", color); fg.setAttribute("stroke-width", 6);
+  fg.setAttribute("stroke-linecap", "round");
+  fg.setAttribute("stroke-dasharray", `${c}`);
+  fg.setAttribute("stroke-dashoffset", `${offset}`);
+  fg.setAttribute("transform", `rotate(-90 ${size / 2} ${size / 2})`);
+  svg.appendChild(bg); svg.appendChild(fg);
+  return svg;
+}
 
 function renderNutrition() {
   view.appendChild(el("h1", { class: "page-title" }, "Nutrition"));
-  view.appendChild(el("p", { class: "page-sub" }, "Log meals manually, or snap a photo and let AI estimate calories."));
+  view.appendChild(el("p", { class: "page-sub" }, "Log meals by search or photo, track water, and hit your macro goals."));
 
-  const goalCal = state.profile?.goalCalories;
-  const todayCals = state.nutrition.filter(n => n.date === todayStr()).reduce((s, n) => s + n.calories, 0);
-  if (goalCal) {
-    const pct = Math.min(100, Math.round((todayCals / goalCal) * 100));
-    const goalCard = el("div", { class: "card section" }, [
-      el("h3", {}, "Today's calories"),
-      el("div", { class: "big" }, `${todayCals} / ${goalCal} kcal`),
-      el("div", { class: "bar-track" }, el("div", { class: "bar-fill", style: `width:${pct}%` })),
-    ]);
-    view.appendChild(goalCard);
+  const p = state.profile;
+  const totals = todayTotals();
+
+  // Calories + macro rings
+  const summaryCard = el("div", { class: "card section" });
+  summaryCard.appendChild(el("h3", {}, "Today"));
+  if (p?.goalCalories) {
+    const pct = Math.min(100, Math.round((totals.calories / p.goalCalories) * 100));
+    summaryCard.appendChild(el("div", { class: "big" }, `${totals.calories} / ${p.goalCalories} kcal`));
+    summaryCard.appendChild(el("div", { class: "bar-track" }, el("div", { class: "bar-fill", style: `width:${pct}%` })));
+
+    const rings = el("div", { class: "rings-row" });
+    const macros = [
+      ["Protein", totals.protein, p.proteinGoal, "#ff5a3c"],
+      ["Carbs", totals.carbs, p.carbsGoal, "#ffb84c"],
+      ["Fat", totals.fat, p.fatGoal, "#3ddc97"],
+    ];
+    for (const [label, val, goal, color] of macros) {
+      const wrap = el("div", { class: "ring-wrap" });
+      wrap.appendChild(ringSvg(goal ? val / goal : 0, color));
+      wrap.appendChild(el("div", { class: "ring-val" }, `${Math.round(val)}/${goal || "-"}g`));
+      wrap.appendChild(el("div", { class: "ring-label" }, label));
+      rings.appendChild(wrap);
+    }
+    summaryCard.appendChild(rings);
   } else {
-    view.appendChild(el("div", { class: "empty" }, "Set your height/weight/age in Profile to get a personalized goal calorie target."));
+    summaryCard.appendChild(el("div", { class: "empty" }, "Set your Profile to unlock personalized calorie & macro goals."));
+  }
+  view.appendChild(summaryCard);
+
+  // Water tracker
+  const waterGoal = p?.waterGoalMl || 2500;
+  const waterToday = state.water.filter(w => w.date === todayStr()).reduce((s, w) => s + w.amountMl, 0);
+  const waterPct = Math.min(100, Math.round((waterToday / waterGoal) * 100));
+  const waterCard = el("div", { class: "card section" });
+  waterCard.appendChild(el("h3", {}, "Water"));
+  waterCard.appendChild(el("div", { class: "big" }, `${(waterToday / 1000).toFixed(2)}L / ${(waterGoal / 1000).toFixed(1)}L`));
+  waterCard.appendChild(el("div", { class: "bar-track" }, el("div", { class: "bar-fill", style: `width:${waterPct}%` })));
+  const waterRow = el("div", { class: "water-row" });
+  for (const ml of [200, 250, 500, 1000]) {
+    waterRow.appendChild(el("button", { class: "water-btn", onclick: () => {
+      state.water.unshift({ id: uid(), date: todayStr(), amountMl: ml });
+      saveState(); render();
+    }}, `+${ml}ml`));
+  }
+  waterRow.appendChild(el("button", { class: "btn-ghost", onclick: () => {
+    state.water = state.water.filter(w => w.date !== todayStr());
+    saveState(); render();
+  }}, "Reset today"));
+  waterCard.appendChild(waterRow);
+  view.appendChild(waterCard);
+
+  // Meal type selector
+  const mealCard = el("div", { class: "card section" });
+  mealCard.appendChild(el("h3", {}, "Log a meal"));
+  const mealRow = el("div", { class: "form-row" });
+  for (const mt of MEAL_TYPES) {
+    mealRow.appendChild(el("button", {
+      class: "btn-ghost", style: selectedMealType === mt ? "border-color:#ff5a3c;color:#f2f4f7" : "",
+      onclick: () => { selectedMealType = mt; render(); },
+    }, MEAL_LABELS[mt]));
+  }
+  mealCard.appendChild(mealRow);
+
+  // Food search
+  const searchWrap = el("div", { class: "search-wrap" });
+  const searchInput = el("input", { placeholder: "Search a food (e.g. banana, rice, paneer)" });
+  const resultsBox = el("div", { class: "search-results" });
+  resultsBox.style.display = "none";
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.trim().toLowerCase();
+    resultsBox.innerHTML = "";
+    if (!q) { resultsBox.style.display = "none"; return; }
+    const matches = (typeof FOOD_DB !== "undefined" ? FOOD_DB : [])
+      .filter(f => f.name.toLowerCase().includes(q)).slice(0, 8);
+    if (!matches.length) { resultsBox.style.display = "none"; return; }
+    for (const f of matches) {
+      resultsBox.appendChild(el("div", { class: "search-result-item", onclick: () => {
+        pendingFoodEntry = { ...f, quantity: 1 };
+        searchInput.value = "";
+        resultsBox.style.display = "none";
+        render();
+      }}, [
+        el("div", { class: "search-result-name" }, f.name),
+        el("div", { class: "search-result-sub" }, `${f.serving} · ${f.calories} kcal`),
+      ]));
+    }
+    resultsBox.style.display = "block";
+  });
+  searchWrap.appendChild(searchInput);
+  searchWrap.appendChild(resultsBox);
+  mealCard.appendChild(el("div", { class: "form-row" }, searchWrap));
+
+  if (pendingFoodEntry) {
+    const qty = el("input", { type: "number", value: pendingFoodEntry.quantity, step: "0.5", style: "max-width:90px" });
+    const confirmBtn = el("button", { class: "btn", onclick: () => {
+      const q = Number(qty.value) || 1;
+      state.nutrition.unshift({
+        id: uid(), date: todayStr(), mealType: selectedMealType,
+        food: `${pendingFoodEntry.name} (${q}×)`,
+        calories: Math.round(pendingFoodEntry.calories * q),
+        protein: Math.round(pendingFoodEntry.protein * q * 10) / 10,
+        carbs: Math.round(pendingFoodEntry.carbs * q * 10) / 10,
+        fat: Math.round(pendingFoodEntry.fat * q * 10) / 10,
+      });
+      pendingFoodEntry = null;
+      saveState(); render();
+    }}, "Add");
+    const cancelBtn = el("button", { class: "btn-ghost", onclick: () => { pendingFoodEntry = null; render(); }}, "Cancel");
+    mealCard.appendChild(el("div", { class: "list-item" }, [
+      el("div", { class: "li-main" }, [
+        el("div", { class: "li-title" }, pendingFoodEntry.name),
+        el("div", { class: "li-sub" }, `${pendingFoodEntry.serving} · ${pendingFoodEntry.calories} kcal each`),
+      ]),
+      el("div", { class: "li-actions" }, [el("span", { class: "dim" }, "×"), qty, confirmBtn, cancelBtn]),
+    ]));
   }
 
-  const photoCard = el("div", { class: "card section" });
-  photoCard.appendChild(el("h3", {}, "Snap a meal photo"));
+  // Photo logging
   const fileInput = el("input", { type: "file", accept: "image/*", capture: "environment" });
   const status = el("div", { class: "chat-error" });
   fileInput.addEventListener("change", async () => {
@@ -321,7 +463,7 @@ function renderNutrition() {
       });
       const data = await resp.json();
       if (!resp.ok) throw new Error(data.error || "Request failed");
-      state.nutrition.unshift({ id: uid(), date: todayStr(), food: data.food,
+      state.nutrition.unshift({ id: uid(), date: todayStr(), mealType: selectedMealType, food: data.food,
         calories: data.calories, protein: data.protein, carbs: data.carbs, fat: data.fat });
       saveState();
       status.textContent = "";
@@ -331,39 +473,51 @@ function renderNutrition() {
       foodPending = false; render();
     }
   });
-  photoCard.appendChild(el("div", { class: "form-row" }, fileInput));
-  photoCard.appendChild(status);
-  view.appendChild(photoCard);
+  mealCard.appendChild(el("p", { class: "dim" }, "or snap a photo — AI estimates it:"));
+  mealCard.appendChild(el("div", { class: "form-row" }, fileInput));
+  mealCard.appendChild(status);
 
-  const food = el("input", { placeholder: "Food (e.g. Chicken & rice)" });
+  const food = el("input", { placeholder: "Or type manually: food name" });
   const calories = el("input", { placeholder: "Calories", type: "number" });
   const protein = el("input", { placeholder: "Protein (g)", type: "number" });
   const addBtn = el("button", { class: "btn", onclick: () => {
     if (!food.value.trim()) return;
-    state.nutrition.unshift({ id: uid(), date: todayStr(), food: food.value.trim(),
+    state.nutrition.unshift({ id: uid(), date: todayStr(), mealType: selectedMealType, food: food.value.trim(),
       calories: Number(calories.value) || 0, protein: Number(protein.value) || 0 });
     saveState(); render();
   }}, "Add");
+  mealCard.appendChild(el("div", { class: "form-row" }, [food, calories, protein, addBtn]));
+  view.appendChild(mealCard);
 
-  view.appendChild(el("div", { class: "form-row" }, [food, calories, protein, addBtn]));
-
-  const list = el("div", { class: "list" });
-  if (!state.nutrition.length) {
-    list.appendChild(el("div", { class: "empty" }, "No meals logged yet."));
+  // Today's log, grouped by meal
+  const todayEntries = state.nutrition.filter(n => n.date === todayStr());
+  const logCard = el("div", { class: "section" });
+  logCard.appendChild(el("div", { class: "section-head" }, el("h2", {}, "Today's log")));
+  if (!todayEntries.length) {
+    logCard.appendChild(el("div", { class: "empty" }, "Nothing logged yet today."));
   } else {
-    for (const n of state.nutrition) {
-      list.appendChild(el("div", { class: "list-item" }, [
-        el("div", { class: "li-main" }, [
-          el("div", { class: "li-title" }, n.food),
-          el("div", { class: "li-sub" }, `${n.calories} kcal · ${n.protein}g protein${n.carbs != null ? ` · ${n.carbs}g carbs · ${n.fat}g fat` : ""} · ${n.date}`),
-        ]),
-        el("div", { class: "li-actions" }, el("button", { class: "btn-ghost", onclick: () => {
-          state.nutrition = state.nutrition.filter(x => x.id !== n.id); saveState(); render();
-        }}, "Delete")),
-      ]));
+    for (const mt of MEAL_TYPES) {
+      const items = todayEntries.filter(n => (n.mealType || "snack") === mt);
+      if (!items.length) continue;
+      const group = el("div", { class: "meal-group" });
+      group.appendChild(el("h4", {}, MEAL_LABELS[mt]));
+      const list = el("div", { class: "list" });
+      for (const n of items) {
+        list.appendChild(el("div", { class: "list-item" }, [
+          el("div", { class: "li-main" }, [
+            el("div", { class: "li-title" }, n.food),
+            el("div", { class: "li-sub" }, `${n.calories} kcal · ${n.protein}g P${n.carbs != null ? ` · ${n.carbs}g C · ${n.fat}g F` : ""}`),
+          ]),
+          el("div", { class: "li-actions" }, el("button", { class: "btn-ghost", onclick: () => {
+            state.nutrition = state.nutrition.filter(x => x.id !== n.id); saveState(); render();
+          }}, "Delete")),
+        ]));
+      }
+      group.appendChild(list);
+      logCard.appendChild(group);
     }
   }
-  view.appendChild(list);
+  view.appendChild(logCard);
 }
 
 function fileToBase64(file) {
@@ -509,6 +663,19 @@ function computeGoalCalories(p) {
   return Math.round(bmr * mult);
 }
 
+function computeMacroGoals(calories) {
+  // Standard 30/40/30 protein/carb/fat split.
+  return {
+    proteinGoal: Math.round((calories * 0.30) / 4),
+    carbsGoal: Math.round((calories * 0.40) / 4),
+    fatGoal: Math.round((calories * 0.30) / 9),
+  };
+}
+
+function computeWaterGoalMl(weightKg) {
+  return weightKg ? Math.round(weightKg * 35) : 2500;
+}
+
 function computeBmi(p) {
   if (!p || !p.heightCm || !p.weightKg) return null;
   const m = p.heightCm / 100;
@@ -546,6 +713,8 @@ function renderProfile() {
       activityLevel: activity.value,
     };
     profile.goalCalories = computeGoalCalories(profile);
+    Object.assign(profile, computeMacroGoals(profile.goalCalories || 2000));
+    profile.waterGoalMl = computeWaterGoalMl(profile.weightKg);
     state.profile = profile;
     saveState(); render();
   }}, "Save profile");
@@ -557,7 +726,9 @@ function renderProfile() {
     const bmi = computeBmi(state.profile);
     view.appendChild(el("div", { class: "grid" }, [
       statCard("BMI", String(bmi), bmiLabel(bmi)),
-      statCard("Goal calories", String(state.profile.goalCalories), "kcal/day (maintenance, from BMR × activity)"),
+      statCard("Goal calories", String(state.profile.goalCalories), "kcal/day maintenance"),
+      statCard("Macro goals", `${state.profile.proteinGoal}P / ${state.profile.carbsGoal}C / ${state.profile.fatGoal}F`, "grams/day"),
+      statCard("Water goal", `${(state.profile.waterGoalMl / 1000).toFixed(1)}L`, "per day"),
     ]));
   }
 }
@@ -570,6 +741,81 @@ function bmiLabel(bmi) {
   return "Obese";
 }
 
+// ---------- Progress charts ----------
+function drawLineChart(canvas, points, color) {
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, w, h);
+
+  if (!points.length) {
+    ctx.fillStyle = "#9aa4b2"; ctx.font = "13px sans-serif";
+    ctx.fillText("Not enough data yet", 12, h / 2);
+    return;
+  }
+  const vals = points.map(p => p.v);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const pad = 20;
+  const range = max - min || 1;
+  const stepX = points.length > 1 ? (w - pad * 2) / (points.length - 1) : 0;
+
+  ctx.beginPath();
+  points.forEach((p, i) => {
+    const x = pad + i * stepX;
+    const y = h - pad - ((p.v - min) / range) * (h - pad * 2);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.lineJoin = "round"; ctx.stroke();
+
+  points.forEach((p, i) => {
+    const x = pad + i * stepX;
+    const y = h - pad - ((p.v - min) / range) * (h - pad * 2);
+    ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color; ctx.fill();
+  });
+}
+
+function lastNDates(n) {
+  return [...Array(n)].map((_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (n - 1 - i));
+    return d.toISOString().slice(0, 10);
+  });
+}
+
+function chartCard(title, points, color, unit) {
+  const card = el("div", { class: "card section" });
+  card.appendChild(el("h3", {}, title));
+  const canvas = el("canvas", { class: "chart" });
+  card.appendChild(canvas);
+  if (points.length) {
+    const last = points[points.length - 1].v;
+    card.appendChild(el("div", { class: "dim" }, `Latest: ${last}${unit || ""}`));
+  }
+  requestAnimationFrame(() => drawLineChart(canvas, points, color));
+  return card;
+}
+
+function renderProgress() {
+  view.appendChild(el("h1", { class: "page-title" }, "Progress"));
+  view.appendChild(el("p", { class: "page-sub" }, "Trends across weight, calories, and your PRIME score."));
+
+  const weightPoints = [...state.body].filter(b => b.weightKg).sort((a, b) => a.date.localeCompare(b.date))
+    .slice(-14).map(b => ({ v: b.weightKg }));
+  view.appendChild(chartCard("Weight (kg)", weightPoints, "#ffb84c", "kg"));
+
+  const days14 = lastNDates(14);
+  const calPoints = days14.map(d => ({
+    v: state.nutrition.filter(n => n.date === d).reduce((s, n) => s + (n.calories || 0), 0),
+  }));
+  view.appendChild(chartCard("Calories (last 14 days)", calPoints, "#ff5a3c", " kcal"));
+
+  const scorePoints = days14.map(d => ({ v: computeScore(d).total }));
+  view.appendChild(chartCard("PRIME Score (last 14 days)", scorePoints, "#3ddc97"));
+}
+
 // ---------- AI Coach ----------
 function buildContextSnapshot() {
   const { total, subs } = computeScore();
@@ -580,6 +826,8 @@ function buildContextSnapshot() {
     workoutPlan: state.workoutPlan,
     recentWorkouts: state.workouts.slice(0, 5),
     recentNutrition: state.nutrition.slice(0, 5),
+    todayTotals: todayTotals(),
+    waterTodayMl: state.water.filter(w => w.date === todayStr()).reduce((s, w) => s + w.amountMl, 0),
     habits: state.habits.map(h => ({ name: h.name, streak: computeStreak(h) })),
     todaysBlocks: state.blocks.filter(b => b.date === todayStr()),
     recentBody: state.body.slice(0, 3),
