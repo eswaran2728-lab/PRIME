@@ -8,6 +8,7 @@ const defaultState = () => ({
   habits: [],     // {id, name, logs: {date: true}}
   blocks: [],     // {id, date, title, start, end, category}
   body: [],       // {id, date, weightKg, waistCm}
+  chat: [],       // {role: "user"|"assistant", text}
 });
 
 function loadState() {
@@ -88,6 +89,7 @@ function render() {
     habits: renderHabits,
     planner: renderPlanner,
     body: renderBody,
+    coach: renderCoach,
   };
   view.innerHTML = "";
   renderers[activeTab]();
@@ -346,6 +348,81 @@ function renderBody() {
     }
   }
   view.appendChild(list);
+}
+
+// ---------- AI Coach ----------
+function buildContextSnapshot() {
+  const { total, subs } = computeScore();
+  return {
+    primeScore: total,
+    scoreBreakdown: subs,
+    recentWorkouts: state.workouts.slice(0, 5),
+    recentNutrition: state.nutrition.slice(0, 5),
+    habits: state.habits.map(h => ({ name: h.name, streak: computeStreak(h) })),
+    todaysBlocks: state.blocks.filter(b => b.date === todayStr()),
+    recentBody: state.body.slice(0, 3),
+  };
+}
+
+let coachPending = false;
+
+function renderCoach() {
+  view.appendChild(el("h1", { class: "page-title" }, "AI Coach"));
+  view.appendChild(el("p", { class: "page-sub" }, "Ask anything — your coach sees your logged data and personalizes its advice."));
+
+  const windowEl = el("div", { class: "chat-window", id: "chatWindow" });
+  if (!state.chat.length) {
+    windowEl.appendChild(el("div", { class: "msg assistant" },
+      "Hey — I'm your PRIME coach. Ask me about your training, nutrition, habits, or what to focus on today."));
+  }
+  for (const m of state.chat) {
+    windowEl.appendChild(el("div", { class: `msg ${m.role}` }, m.text));
+  }
+  if (coachPending) {
+    windowEl.appendChild(el("div", { class: "msg assistant pending" }, "Thinking..."));
+  }
+  view.appendChild(windowEl);
+  windowEl.scrollTop = windowEl.scrollHeight;
+
+  const input = el("input", { placeholder: "Ask your coach..." });
+  input.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+  const sendBtn = el("button", { class: "btn", onclick: send }, "Send");
+  view.appendChild(el("div", { class: "chat-input-row" }, [input, sendBtn]));
+
+  const errorEl = el("div", { class: "chat-error", id: "chatError" });
+  view.appendChild(errorEl);
+
+  async function send() {
+    const text = input.value.trim();
+    if (!text || coachPending) return;
+    state.chat.push({ role: "user", text });
+    saveState();
+    coachPending = true;
+    render();
+    document.getElementById("chatWindow")?.scrollTo(0, 999999);
+
+    try {
+      const resp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: text,
+          history: state.chat.slice(0, -1).map(m => ({ role: m.role, text: m.text })),
+          context: buildContextSnapshot(),
+        }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "Request failed");
+      state.chat.push({ role: "assistant", text: data.reply || "(no response)" });
+    } catch (err) {
+      const errEl = document.getElementById("chatError");
+      if (errEl) errEl.textContent = "Coach unavailable: " + err.message;
+    } finally {
+      coachPending = false;
+      saveState();
+      render();
+    }
+  }
 }
 
 render();
