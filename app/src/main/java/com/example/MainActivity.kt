@@ -8,7 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,6 +26,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.local.PrimeDatabase
 import com.example.data.repository.PrimeRepository
 import com.example.ui.components.PrimeBottomBar
+import com.example.ui.components.PrimeModulesSheet
 import com.example.ui.components.PrimeToastSnackbar
 import com.example.ui.components.PrimeTopBar
 import com.example.ui.components.QuickActionDialog
@@ -75,11 +78,14 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PrimeApp(viewModel: PrimeViewModel) {
     var currentScreen by remember { mutableStateOf(PrimeScreen.Dashboard) }
     var showScoreDialog by remember { mutableStateOf(false) }
     var showQuickActionDialog by remember { mutableStateOf(false) }
+    var showModulesSheet by remember { mutableStateOf(false) }
+    val modulesSheetState = rememberModalBottomSheetState()
     var activeToast by remember { mutableStateOf<ToastMessage?>(null) }
 
     // Collect Core StateFlows from ViewModel
@@ -104,6 +110,7 @@ fun PrimeApp(viewModel: PrimeViewModel) {
     // Habits & Planner State
     val habits by viewModel.activeHabits.collectAsState()
     val habitLogs by viewModel.todayHabitLogs.collectAsState()
+    val weekHabitLogs by viewModel.last7DayHabitLogs.collectAsState()
 
     val tasks by viewModel.todayTasks.collectAsState()
     val timeBlocks by viewModel.todayTimeBlocks.collectAsState()
@@ -113,6 +120,8 @@ fun PrimeApp(viewModel: PrimeViewModel) {
     val latestMeasurement by viewModel.latestBodyMeasurement.collectAsState()
     val allMeasurements by viewModel.allBodyMeasurements.collectAsState()
     val photos by viewModel.allBodyPhotos.collectAsState()
+    val todayWorkoutSession by viewModel.todayWorkoutSession.collectAsState()
+    val todayWorkoutSets by viewModel.todayWorkoutSets.collectAsState()
 
     // Phase 2: Grooming & Skincare State
     val groomingItems by viewModel.allGroomingItems.collectAsState()
@@ -194,10 +203,10 @@ fun PrimeApp(viewModel: PrimeViewModel) {
                 .widthIn(max = 600.dp),
             topBar = {
                 PrimeTopBar(
-                    profile = profile,
-                    primeScore = dailyScore?.totalScore ?: dailyEntry?.primeScore ?: 0,
-                    onScoreClick = { showScoreDialog = true },
-                    onProfileClick = { currentScreen = PrimeScreen.Settings }
+                    dayCount = totalLoggedDays,
+                    streak = profile?.currentStreak ?: 0,
+                    onStreakClick = { currentScreen = PrimeScreen.Gamification },
+                    onMenuClick = { showModulesSheet = true }
                 )
             },
             bottomBar = {
@@ -221,14 +230,15 @@ fun PrimeApp(viewModel: PrimeViewModel) {
                             dailyScore = dailyScore,
                             totalLoggedDays = totalLoggedDays,
                             todayTasks = tasks,
-                            todayTimeBlocks = timeBlocks,
+                            latestMeasurement = latestMeasurement,
+                            habits = habits,
+                            habitLogs = habitLogs,
                             onScoreClick = { showScoreDialog = true },
                             onNavigate = { currentScreen = it },
                             onQuickAction = { action ->
                                 handleQuickAction(action, viewModel, onNavigate = { currentScreen = it })
                             },
-                            onToggleTask = { viewModel.toggleTask(it) },
-                            onAddTaskClick = { currentScreen = PrimeScreen.Planner }
+                            onToggleTask = { viewModel.toggleTask(it) }
                         )
                     }
 
@@ -289,6 +299,8 @@ fun PrimeApp(viewModel: PrimeViewModel) {
                         HabitsScreen(
                             habits = habits,
                             habitLogs = habitLogs,
+                            weekDates = viewModel.last7Dates,
+                            weekHabitLogs = weekHabitLogs,
                             onToggleHabit = { id, isDone -> viewModel.toggleHabit(id, isDone) },
                             onAddHabit = { name, icon, cat, freq, reminder ->
                                 viewModel.addHabit(name, icon, cat, freq, reminder)
@@ -331,6 +343,8 @@ fun PrimeApp(viewModel: PrimeViewModel) {
                             latestMeasurement = latestMeasurement,
                             allMeasurements = allMeasurements,
                             photos = photos,
+                            todayWorkoutSession = todayWorkoutSession,
+                            todayWorkoutSets = todayWorkoutSets,
                             onLogMeasurement = { w, h, waist, chest, arms, thighs, neck, notes ->
                                 viewModel.logBodyMeasurement(w, h, waist, chest, arms, thighs, neck, notes)
                             }
@@ -484,14 +498,15 @@ fun PrimeApp(viewModel: PrimeViewModel) {
                             dailyScore = dailyScore,
                             totalLoggedDays = totalLoggedDays,
                             todayTasks = tasks,
-                            todayTimeBlocks = timeBlocks,
+                            latestMeasurement = latestMeasurement,
+                            habits = habits,
+                            habitLogs = habitLogs,
                             onScoreClick = { showScoreDialog = true },
                             onNavigate = { currentScreen = it },
                             onQuickAction = { action ->
                                 handleQuickAction(action, viewModel, onNavigate = { currentScreen = it })
                             },
-                            onToggleTask = { viewModel.toggleTask(it) },
-                            onAddTaskClick = { currentScreen = PrimeScreen.Planner }
+                            onToggleTask = { viewModel.toggleTask(it) }
                         )
                     }
 
@@ -672,6 +687,18 @@ fun PrimeApp(viewModel: PrimeViewModel) {
                 onDismiss = { showQuickActionDialog = false },
                 onActionSelected = { action ->
                     handleQuickAction(action, viewModel, onNavigate = { currentScreen = it })
+                }
+            )
+        }
+
+        // "Hamburger" — every module not on the bottom tab bar.
+        if (showModulesSheet) {
+            PrimeModulesSheet(
+                sheetState = modulesSheetState,
+                onDismiss = { showModulesSheet = false },
+                onSelect = { screen ->
+                    currentScreen = screen
+                    showModulesSheet = false
                 }
             )
         }

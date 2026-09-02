@@ -254,6 +254,9 @@ interface HabitDao {
     @Query("SELECT * FROM habit_logs WHERE date = :date")
     suspend fun getHabitLogsForDateSync(date: String): List<HabitLogEntity>
 
+    @Query("SELECT * FROM habit_logs WHERE date IN (:dates)")
+    fun getHabitLogsForDates(dates: List<String>): Flow<List<HabitLogEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHabitLog(log: HabitLogEntity): Long
 

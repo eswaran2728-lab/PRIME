@@ -63,8 +63,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 data class ToastMessage(
     val id: Long = System.currentTimeMillis(),
@@ -72,6 +76,7 @@ data class ToastMessage(
     val undoAction: (() -> Unit)? = null
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class PrimeViewModel(
     val repository: PrimeRepository
 ) : ViewModel() {
@@ -171,6 +176,31 @@ class PrimeViewModel(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    /** Last 7 days (today first) of habit completion logs, for the weekly grid on the Habits screen. */
+    val last7Dates: List<String> = repository.getLastNDateStrings(7)
+    val last7DayHabitLogs: StateFlow<List<HabitLogEntity>> = repository.getHabitLogsForDates(last7Dates).stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // Today's workout session (active or already logged), for the Body screen summary card.
+    val todayWorkoutSession: StateFlow<WorkoutSessionEntity?> = repository.getWorkoutSessionsForDate(todayDate)
+        .map { it.firstOrNull() }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = null
+        )
+
+    val todayWorkoutSets: StateFlow<List<WorkoutSetEntity>> = todayWorkoutSession
+        .flatMapLatest { session -> session?.let { repository.getWorkoutSets(it.id) } ?: flowOf(emptyList()) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
     // Planner State
     val todayTasks: StateFlow<List<TaskEntity>> = repository.getTasksForDate(todayDate).stateIn(

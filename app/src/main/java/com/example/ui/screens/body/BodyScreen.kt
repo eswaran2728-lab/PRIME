@@ -3,7 +3,6 @@ package com.example.ui.screens.body
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,20 +14,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccessibilityNew
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MonitorWeight
-import androidx.compose.material.icons.filled.Straighten
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,8 +33,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -51,18 +40,25 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.local.entities.BodyMeasurementEntity
 import com.example.data.local.entities.BodyPhotoEntity
-import com.example.ui.theme.PrimeBlue
-import com.example.ui.theme.PrimeCyan
-import com.example.ui.theme.PrimeGold
-import com.example.ui.theme.PrimeGreen
-import com.example.ui.theme.PrimeOrange
-import com.example.ui.theme.PrimePurple
+import com.example.data.local.entities.WorkoutSessionEntity
+import com.example.data.local.entities.WorkoutSetEntity
+import com.example.ui.components.BlueprintFrame
+import com.example.ui.components.SquareTag
+import com.example.ui.components.SquareTagVariant
+import com.example.ui.theme.PrimeBackground
+import com.example.ui.theme.PrimePrimary
+import com.example.ui.theme.PrimeSurface
+import com.example.ui.theme.PrimeSurfaceVariant
+import com.example.ui.theme.PrimeTextPrimary
+import com.example.ui.theme.PrimeTextSecondary
 
 @Composable
 fun BodyScreen(
     latestMeasurement: BodyMeasurementEntity?,
     allMeasurements: List<BodyMeasurementEntity>,
     photos: List<BodyPhotoEntity>,
+    todayWorkoutSession: WorkoutSessionEntity?,
+    todayWorkoutSets: List<WorkoutSetEntity>,
     onLogMeasurement: (Float, Float, Float?, Float?, Float?, Float?, Float?, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -76,7 +72,7 @@ fun BodyScreen(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             Spacer(modifier = Modifier.height(4.dp))
@@ -85,188 +81,183 @@ fun BodyScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "BODY COMPOSITION",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.5.sp
-                        ),
-                        color = PrimeGold
-                    )
-                    Text(
-                        text = "Physical conditioning metrics & US Navy body fat.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                FilledTonalButton(
-                    onClick = { showLogDialog = true },
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimeGold, contentColor = Color.Black)
+                Text(
+                    text = "BODY COMPOSITION",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 1.5.sp),
+                    color = PrimePrimary
+                )
+                Row(
+                    modifier = Modifier
+                        .clickable { showLogDialog = true }
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Default.Add, contentDescription = null, tint = PrimePrimary, modifier = Modifier.size(15.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("LOG", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
+                    Text("LOG", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = PrimePrimary)
                 }
             }
         }
 
-        // Hero Metric Cards
+        // Hero: weight, BF, BMI, girths — blueprint frame.
         item {
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            BlueprintFrame(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Column {
+                            Row(verticalAlignment = Alignment.Bottom) {
+                                Text(
+                                    text = "$currentWeight",
+                                    style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = PrimePrimary
+                                )
+                                Text("kg", style = MaterialTheme.typography.titleMedium, color = PrimePrimary, modifier = Modifier.padding(bottom = 4.dp))
+                            }
                             Text(
-                                text = "${currentWeight} kg",
-                                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Black),
-                                color = PrimeGold
-                            )
-                            Text(
-                                text = "Current Scale Weight",
+                                text = "−0.6kg this week",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                color = PrimeTextSecondary
                             )
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = PrimeGreen.copy(alpha = 0.15f)
-                            ) {
-                                Text(
-                                    text = "BF: ${String.format("%.1f", currentBf)}%",
-                                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = PrimeGreen,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "BMI: ${String.format("%.1f", currentBmi)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            SquareTag(text = "BF ${fmt1(currentBf)}%", variant = SquareTagVariant.Accent)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("BMI ${fmt1(currentBmi)}", style = MaterialTheme.typography.bodySmall, color = PrimeTextSecondary)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Girth Measurements Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        BodyGirthPill(label = "Waist", value = latestMeasurement?.waistCm, unit = "cm", color = PrimeOrange)
-                        BodyGirthPill(label = "Chest", value = latestMeasurement?.chestCm, unit = "cm", color = PrimeBlue)
-                        BodyGirthPill(label = "Arms", value = latestMeasurement?.armsCm, unit = "cm", color = PrimePurple)
-                        BodyGirthPill(label = "Thighs", value = latestMeasurement?.thighsCm, unit = "cm", color = PrimeCyan)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        GirthCell(label = "Waist", value = latestMeasurement?.waistCm, unit = "cm", modifier = Modifier.weight(1f))
+                        GirthCell(label = "Chest", value = latestMeasurement?.chestCm, unit = "cm", modifier = Modifier.weight(1f))
+                        GirthCell(label = "Arms", value = latestMeasurement?.armsCm, unit = "cm", modifier = Modifier.weight(1f))
+                        GirthCell(label = "Thighs", value = latestMeasurement?.thighsCm, unit = "cm", modifier = Modifier.weight(1f))
                     }
                 }
             }
         }
 
-        // Physique Timeline & Photos
+        // TODAY'S WORKOUT — real data from today's session, if any.
         item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(PrimeSurface)
+                    .padding(14.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "PHYSIQUE TIMELINE (FRONT / SIDE / BACK)",
-                        style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "TODAY'S WORKOUT",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp),
+                        color = PrimeTextSecondary
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    if (todayWorkoutSession != null) {
+                        SquareTag(text = todayWorkoutSession.templateName, variant = SquareTagVariant.Outline)
+                    }
+                }
+
+                val grouped = todayWorkoutSets.groupBy { it.exerciseName }
+                if (todayWorkoutSession == null || grouped.isEmpty()) {
                     Text(
-                        text = "Take consistent weekly progress photos in standardized lighting.",
+                        text = "No workout logged today.",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = PrimeTextSecondary,
+                        modifier = Modifier.padding(top = 10.dp)
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf("Front Pose", "Side Profile", "Back Lat Spread").forEach { pose ->
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant,
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .height(90.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(Icons.Default.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(24.dp))
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(pose, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
+                } else {
+                    grouped.forEach { (name, sets) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(name, style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.5.sp), color = PrimeTextPrimary)
+                            Text(
+                                text = "${sets.size}×${sets.last().reps} · ${sets.maxOf { it.weightKg }} kg",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = PrimePrimary
+                            )
                         }
                     }
                 }
             }
         }
 
-        // Historical Log Table
+        // Physique timeline placeholders
+        item {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(PrimeSurface)
+                    .padding(14.dp)
+            ) {
+                Text(
+                    text = "PHYSIQUE TIMELINE",
+                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp),
+                    color = PrimeTextSecondary
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Front", "Side", "Back").forEach { pose ->
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(84.dp)
+                                .background(PrimeBackground),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = PrimeTextSecondary, modifier = Modifier.size(18.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(pose, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = PrimeTextSecondary)
+                        }
+                    }
+                }
+            }
+        }
+
         item {
             Text(
                 text = "LOGGED MEASUREMENT HISTORY",
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = PrimeTextSecondary
             )
         }
 
         if (allMeasurements.isEmpty()) {
             item {
-                Text("No measurements logged yet.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("No measurements logged yet.", style = MaterialTheme.typography.bodyMedium, color = PrimeTextSecondary)
             }
         } else {
             items(allMeasurements) { m ->
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PrimeSurface)
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "${m.date} — ${m.weightKg} kg",
-                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Waist: ${m.waistCm ?: "-"}cm · Chest: ${m.chestCm ?: "-"}cm · Arms: ${m.armsCm ?: "-"}cm",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        if (m.bodyFatEstimate != null) {
-                            Text(
-                                text = "${String.format("%.1f", m.bodyFatEstimate)}% BF",
-                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                color = PrimeGreen
-                            )
-                        }
+                    Column {
+                        Text(
+                            text = "${m.date} — ${m.weightKg} kg",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = PrimeTextPrimary
+                        )
+                        Text(
+                            text = "Waist: ${m.waistCm ?: "-"}cm · Chest: ${m.chestCm ?: "-"}cm · Arms: ${m.armsCm ?: "-"}cm",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PrimeTextSecondary
+                        )
+                    }
+                    if (m.bodyFatEstimate != null) {
+                        Text(
+                            text = "${fmt1(m.bodyFatEstimate)}% BF",
+                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                            color = PrimePrimary
+                        )
                     }
                 }
             }
@@ -287,33 +278,28 @@ fun BodyScreen(
     }
 }
 
+private fun fmt1(v: Float): String = String.format(java.util.Locale.US, "%.1f", v)
+
 @Composable
-fun BodyGirthPill(
-    label: String,
-    value: Float?,
-    unit: String,
-    color: Color
-) {
-    Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant
+private fun GirthCell(label: String, value: Float?, unit: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .background(PrimeSurfaceVariant)
+            .padding(vertical = 8.dp, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(
-                text = if (value != null) "${value.toInt()}$unit" else "--",
-                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                color = color
-            )
-        }
+        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp), color = PrimeTextSecondary)
+        Text(
+            text = if (value != null) "${value.toInt()}$unit" else "--",
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold, fontSize = 13.sp),
+            color = PrimeTextPrimary,
+            modifier = Modifier.padding(top = 2.dp)
+        )
     }
 }
 
 @Composable
-fun LogMeasurementDialog(
+private fun LogMeasurementDialog(
     latest: BodyMeasurementEntity?,
     onDismiss: () -> Unit,
     onSave: (Float, Float, Float?, Float?, Float?, Float?, Float?, String) -> Unit
@@ -328,8 +314,8 @@ fun LogMeasurementDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(0.dp),
+            color = PrimeSurface,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -340,9 +326,9 @@ fun LogMeasurementDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("LOG BODY METRICS", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black), color = PrimeGold)
+                    Text("LOG BODY METRICS", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black), color = PrimePrimary)
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = PrimeTextSecondary)
                     }
                 }
 
@@ -369,16 +355,19 @@ fun LogMeasurementDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                FilledTonalButton(
-                    onClick = {
-                        val w = weight.toFloatOrNull() ?: 80f
-                        val h = height.toFloatOrNull() ?: 180f
-                        onSave(w, h, waist.toFloatOrNull(), chest.toFloatOrNull(), arms.toFloatOrNull(), thighs.toFloatOrNull(), neck.toFloatOrNull(), "Manual entry")
-                    },
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimeGold, contentColor = Color.Black),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PrimePrimary)
+                        .clickable {
+                            val w = weight.toFloatOrNull() ?: 80f
+                            val h = height.toFloatOrNull() ?: 180f
+                            onSave(w, h, waist.toFloatOrNull(), chest.toFloatOrNull(), arms.toFloatOrNull(), thighs.toFloatOrNull(), neck.toFloatOrNull(), "Manual entry")
+                        }
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("SAVE MEASUREMENT", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    Text("SAVE MEASUREMENT", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = PrimeBackground)
                 }
             }
         }

@@ -37,9 +37,9 @@ fun PrimeBottomBar(
 ) {
     val navItems = listOf(
         PrimeScreen.Dashboard,
-        PrimeScreen.Today,
-        PrimeScreen.Workout,
+        PrimeScreen.Body,
         PrimeScreen.Nutrition,
+        PrimeScreen.Habits,
         PrimeScreen.Planner
     )
 

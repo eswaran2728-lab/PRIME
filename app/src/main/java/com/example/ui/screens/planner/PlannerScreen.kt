@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -77,6 +76,7 @@ import com.example.ui.theme.PrimeOnPrimaryDark
 import com.example.ui.theme.PrimePrimary
 import com.example.ui.theme.PrimeSurface
 import com.example.ui.theme.PrimeTextMuted
+import com.example.ui.theme.PrimeTextPrimary
 import com.example.ui.theme.PrimeTextSecondary
 
 @Composable
@@ -133,7 +133,7 @@ fun PlannerScreen(
                     }
                 },
                 colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimePrimary, contentColor = PrimeOnPrimaryDark),
-                shape = RoundedCornerShape(8.dp)
+                shape = RoundedCornerShape(0.dp)
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
@@ -162,8 +162,8 @@ fun PlannerScreen(
                 )
             },
             modifier = Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .border(1.dp, PrimeBorder, RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(0.dp))
+                .border(1.dp, PrimeBorder, RoundedCornerShape(0.dp))
         ) {
             Tab(
                 selected = selectedTab == 0,
@@ -195,7 +195,7 @@ fun PlannerScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = PrimeCardBg),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(0.dp)
                         ) {
                             Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("No scheduled time blocks today.", style = MaterialTheme.typography.bodyMedium, color = PrimeTextSecondary)
@@ -211,36 +211,36 @@ fun PlannerScreen(
                     }
                 } else {
                     items(timeBlocks, key = { it.id }) { block ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = PrimeCardBg),
-                            shape = RoundedCornerShape(12.dp),
-                            border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(PrimeBorder))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(PrimeCardBg)
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
+                            Text(
+                                text = block.startTime,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = PrimeTextSecondary,
+                                modifier = Modifier.width(48.dp)
+                            )
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(10.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            try {
-                                                Color(android.graphics.Color.parseColor(block.colorHex))
-                                            } catch (e: Exception) {
-                                                PrimePrimary
-                                            }
-                                        )
-                                )
-                                Spacer(modifier = Modifier.width(12.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(block.title, style = MaterialTheme.typography.titleSmall, color = Color.White, fontWeight = FontWeight.Bold)
-                                    Text("${block.startTime} - ${block.endTime} • ${block.category}", style = MaterialTheme.typography.bodySmall, color = PrimeTextSecondary)
-                                }
-                            }
+                                    .width(2.dp)
+                                    .height(24.dp)
+                                    .background(PrimePrimary)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Text(
+                                text = block.title,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = PrimeTextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+                            com.example.ui.components.SquareTag(
+                                text = block.category,
+                                variant = com.example.ui.components.SquareTagVariant.Outline
+                            )
                         }
                     }
                 }
@@ -256,7 +256,7 @@ fun PlannerScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = PrimeCardBg),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(0.dp)
                         ) {
                             Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("No tasks scheduled for today.", style = MaterialTheme.typography.bodyMedium, color = PrimeTextSecondary)
@@ -278,7 +278,7 @@ fun PlannerScreen(
                                 .clickable { onToggleTask(task) }
                                 .testTag("task_item_${task.id}"),
                             colors = CardDefaults.cardColors(containerColor = if (task.isCompleted) PrimeCardBg.copy(alpha = 0.6f) else PrimeCardBg),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(0.dp),
                             border = CardDefaults.outlinedCardBorder().copy(
                                 brush = androidx.compose.ui.graphics.SolidColor(if (task.isCompleted) PrimePrimary.copy(alpha = 0.5f) else PrimeBorder)
                             )
@@ -349,7 +349,7 @@ fun PlannerScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = PrimeCardBg),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = RoundedCornerShape(0.dp)
                         ) {
                             Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text("No strategic goals set for this level.", style = MaterialTheme.typography.bodyMedium, color = PrimeTextSecondary)
@@ -368,7 +368,7 @@ fun PlannerScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(containerColor = PrimeCardBg),
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(0.dp),
                             border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(PrimeBorder))
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
@@ -419,7 +419,7 @@ fun PlannerScreen(
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(8.dp)
-                                            .clip(RoundedCornerShape(4.dp))
+                                            .clip(RoundedCornerShape(0.dp))
                                     )
                                     Spacer(modifier = Modifier.width(12.dp))
                                     Text(
@@ -440,7 +440,7 @@ fun PlannerScreen(
                                     Button(
                                         onClick = { onConvertGoalToTask(goal) },
                                         colors = ButtonDefaults.buttonColors(containerColor = PrimeSurface, contentColor = PrimePrimary),
-                                        shape = RoundedCornerShape(8.dp)
+                                        shape = RoundedCornerShape(0.dp)
                                     ) {
                                         Icon(Icons.Default.CalendarMonth, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
@@ -469,7 +469,7 @@ fun PlannerScreen(
 
         Dialog(onDismissRequest = { showAddGoalDialog = false }) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(0.dp),
                 color = PrimeCardBg,
                 border = androidx.compose.foundation.BorderStroke(1.dp, PrimeBorder),
                 modifier = Modifier.fillMaxWidth()
@@ -565,7 +565,7 @@ fun PlannerScreen(
 
         Dialog(onDismissRequest = { showAddTaskDialog = false }) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(0.dp),
                 color = PrimeCardBg,
                 border = androidx.compose.foundation.BorderStroke(1.dp, PrimeBorder),
                 modifier = Modifier.fillMaxWidth()
@@ -637,7 +637,7 @@ fun PlannerScreen(
 
         Dialog(onDismissRequest = { showAddTimeBlockDialog = false }) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(0.dp),
                 color = PrimeCardBg,
                 border = androidx.compose.foundation.BorderStroke(1.dp, PrimeBorder),
                 modifier = Modifier.fillMaxWidth()
