@@ -1,6 +1,6 @@
 package com.example.ui.screens.nutrition
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,27 +16,17 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -49,8 +39,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -59,13 +49,13 @@ import com.example.data.local.entities.DailyEntryEntity
 import com.example.data.local.entities.FoodItemEntity
 import com.example.data.local.entities.NutritionLogEntity
 import com.example.data.local.entities.ProfileEntity
-import com.example.ui.theme.PrimeBlue
-import com.example.ui.theme.PrimeCyan
-import com.example.ui.theme.PrimeGold
-import com.example.ui.theme.PrimeGreen
-import com.example.ui.theme.PrimeOrange
-import com.example.ui.theme.PrimePurple
-import com.example.ui.theme.PrimeRed
+import com.example.ui.components.BlueprintFrame
+import com.example.ui.theme.PrimeBackground
+import com.example.ui.theme.PrimePrimary
+import com.example.ui.theme.PrimeSurface
+import com.example.ui.theme.PrimeSurfaceVariant
+import com.example.ui.theme.PrimeTextPrimary
+import com.example.ui.theme.PrimeTextSecondary
 
 @Composable
 fun NutritionScreen(
@@ -100,214 +90,82 @@ fun NutritionScreen(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
             Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "NUTRITION & MACROS",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.5.sp
-                        ),
-                        color = PrimeGold
-                    )
-                    Text(
-                        text = "Precision caloric and macronutrient fuel tracking.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = PrimeGold.copy(alpha = 0.15f)
-                ) {
-                    Text(
-                        text = profile?.primaryGoal ?: "Muscle Gain",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                        color = PrimeGold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
+            Text(
+                text = "NUTRITION",
+                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 1.5.sp),
+                color = PrimePrimary
+            )
         }
 
-        // Calorie & Macros Hero Card
+        // Calorie ring + macros — blueprint frame.
         item {
-            Card(
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(18.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                text = "$loggedCalories",
-                                style = MaterialTheme.typography.displayMedium.copy(fontWeight = FontWeight.Black),
-                                color = PrimeGold
-                            )
-                            Text(
-                                text = "of $targetCalories kcal goal",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "${targetCalories - loggedCalories} kcal",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = if (targetCalories >= loggedCalories) PrimeGreen else PrimeRed
-                            )
-                            Text(
-                                text = if (targetCalories >= loggedCalories) "remaining" else "over target",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
+            BlueprintFrame(modifier = Modifier.fillMaxWidth()) {
+                Row(modifier = Modifier.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                    CalorieRing(consumed = loggedCalories, goal = targetCalories, sizeDp = 96.dp)
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.width(18.dp))
 
-                    // Linear Progress for calories
-                    LinearProgressIndicator(
-                        progress = { (loggedCalories.toFloat() / targetCalories.toFloat()).coerceIn(0f, 1f) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = PrimeGold,
-                        trackColor = MaterialTheme.colorScheme.surfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Macro breakdown columns
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        MacroColumn(
-                            label = "Protein",
-                            logged = loggedProtein,
-                            target = targetProtein,
-                            unit = "g",
-                            color = PrimeBlue,
-                            modifier = Modifier.weight(1f)
-                        )
-                        MacroColumn(
-                            label = "Carbs",
-                            logged = loggedCarbs,
-                            target = targetCarbs,
-                            unit = "g",
-                            color = PrimeOrange,
-                            modifier = Modifier.weight(1f)
-                        )
-                        MacroColumn(
-                            label = "Fat",
-                            logged = loggedFat,
-                            target = targetFat,
-                            unit = "g",
-                            color = PrimePurple,
-                            modifier = Modifier.weight(1f)
-                        )
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        MacroBar(label = "Protein", logged = loggedProtein, target = targetProtein, unit = "g")
+                        MacroBar(label = "Carbs", logged = loggedCarbs, target = targetCarbs, unit = "g")
+                        MacroBar(label = "Fat", logged = loggedFat, target = targetFat, unit = "g")
                     }
                 }
             }
         }
 
-        // Hydration Card
+        // Hydration
         item {
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(PrimeSurface)
+                    .padding(14.dp)
             ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "WATER",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp),
+                        color = PrimeTextSecondary
+                    )
+                    Text("$loggedWater / $targetWater ml", style = MaterialTheme.typography.labelMedium, color = PrimePrimary)
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                val cupMl = (targetWater / 8f).coerceAtLeast(1f)
+                val filledCups = (loggedWater / cupMl).toInt().coerceIn(0, 8)
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = PrimeCyan.copy(alpha = 0.15f), modifier = Modifier.size(36.dp)) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(Icons.Default.WaterDrop, contentDescription = null, tint = PrimeCyan, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "$loggedWater / $targetWater ml",
-                                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Daily Hydration Target",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = PrimeCyan.copy(alpha = 0.15f),
+                    repeat(8) { i ->
+                        Icon(
+                            imageVector = Icons.Default.WaterDrop,
+                            contentDescription = "Cup ${i + 1}",
+                            tint = if (i < filledCups) PrimePrimary else PrimeTextSecondary.copy(alpha = 0.3f),
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { onQuickWater(250) }
-                        ) {
-                            Text(
-                                text = "+250ml",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = PrimeCyan,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                            )
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = PrimeCyan.copy(alpha = 0.25f),
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable { onQuickWater(500) }
-                        ) {
-                            Text(
-                                text = "+500ml",
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = PrimeCyan,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                            )
-                        }
+                                .weight(1f)
+                                .size(20.dp)
+                                .clickable { onQuickWater(cupMl.toInt()) }
+                        )
                     }
                 }
             }
         }
 
-        // Action Buttons Row
+        // Action buttons
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilledTonalButton(
                     onClick = {
                         selectedMealForLog = "Breakfast"
                         showLogFoodDialog = true
                     },
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimeGreen, contentColor = Color.Black),
+                    shape = RoundedCornerShape(0.dp),
+                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimePrimary, contentColor = PrimeBackground),
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -317,104 +175,49 @@ fun NutritionScreen(
 
                 OutlinedButton(
                     onClick = { showAddCustomFoodDialog = true },
+                    shape = RoundedCornerShape(0.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("+ CUSTOM FOOD", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = PrimeGold)
+                    Text("+ CUSTOM FOOD", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = PrimePrimary)
                 }
             }
         }
 
-        // Meals Breakdown
+        // Today's meals
         item {
             Text(
-                text = "MEALS BREAKDOWN",
+                text = "TODAY'S MEALS",
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = PrimeTextSecondary
             )
         }
 
         items(mealTypes) { mealType ->
             val mealsForType = nutritionLogs.filter { it.mealType.equals(mealType, ignoreCase = true) }
             val mealCalories = mealsForType.sumOf { it.calories }
-            val mealProtein = mealsForType.sumOf { it.proteinGrams.toDouble() }.toFloat()
+            val detail = if (mealsForType.isEmpty()) "Not logged yet" else mealsForType.joinToString(", ") { it.foodName }
 
-            Card(
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(PrimeSurface)
+                    .clickable {
+                        selectedMealForLog = mealType
+                        showLogFoodDialog = true
+                    }
+                    .padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = mealType,
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "$mealCalories kcal · ${mealProtein.toInt()}g protein",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            IconButton(
-                                onClick = {
-                                    selectedMealForLog = mealType
-                                    showLogFoodDialog = true
-                                },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(Icons.Default.Add, contentDescription = "Add to $mealType", tint = PrimeGreen, modifier = Modifier.size(18.dp))
-                            }
-                        }
-                    }
-
-                    if (mealsForType.isEmpty()) {
-                        Text(
-                            text = "No $mealType logged.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(vertical = 4.dp)
-                        )
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            mealsForType.forEach { item ->
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(
-                                                text = item.foodName,
-                                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Text(
-                                                text = "${item.portions} portion(s)",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                        }
-                                        Text(
-                                            text = "${item.calories} kcal · ${item.proteinGrams.toInt()}g P",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                            color = PrimeGreen
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(mealType, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp), color = PrimeTextPrimary)
+                    Text(detail, style = MaterialTheme.typography.labelSmall, color = PrimeTextSecondary, maxLines = 1)
                 }
+                Text(
+                    text = if (mealCalories > 0) "$mealCalories kcal" else "—",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = PrimePrimary
+                )
             }
         }
 
@@ -447,38 +250,48 @@ fun NutritionScreen(
 }
 
 @Composable
-fun MacroColumn(
-    label: String,
-    logged: Float,
-    target: Float,
-    unit: String,
-    color: Color,
-    modifier: Modifier = Modifier
-) {
-    val ratio = if (target > 0) (logged / target).coerceIn(0f, 1f) else 0f
-    Column(modifier = modifier.padding(horizontal = 4.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("${logged.toInt()}/${target.toInt()}$unit", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = color)
+private fun CalorieRing(consumed: Int, goal: Int, sizeDp: androidx.compose.ui.unit.Dp) {
+    Box(modifier = Modifier.size(sizeDp), contentAlignment = Alignment.Center) {
+        val progress = if (goal > 0) (consumed.toFloat() / goal.toFloat()).coerceIn(0f, 1f) else 0f
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 7.dp.toPx()
+            drawArc(color = PrimeSurfaceVariant, startAngle = -90f, sweepAngle = 360f, useCenter = false, style = Stroke(width = strokeWidth))
+            drawArc(color = PrimePrimary, startAngle = -90f, sweepAngle = 360f * progress, useCenter = false, style = Stroke(width = strokeWidth, cap = StrokeCap.Round))
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        LinearProgressIndicator(
-            progress = { ratio },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp)),
-            color = color,
-            trackColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$consumed", style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 20.sp), color = PrimeTextPrimary)
+            Text("of $goal", style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = PrimeTextSecondary)
+        }
     }
 }
 
 @Composable
-fun LogFoodDialog(
+private fun MacroBar(label: String, logged: Float, target: Float, unit: String) {
+    val ratio = if (target > 0) (logged / target).coerceIn(0f, 1f) else 0f
+    Column {
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = PrimeTextPrimary)
+            Text("${logged.toInt()}/${target.toInt()}$unit", style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp), color = PrimeTextSecondary)
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .background(PrimeTextPrimary.copy(alpha = 0.14f))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(fraction = ratio)
+                    .fillMaxSize()
+                    .background(PrimePrimary)
+            )
+        }
+    }
+}
+
+@Composable
+private fun LogFoodDialog(
     defaultMealType: String,
     availableFoods: List<FoodItemEntity>,
     onDismiss: () -> Unit,
@@ -495,8 +308,8 @@ fun LogFoodDialog(
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(0.dp),
+            color = PrimeSurface,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -507,9 +320,9 @@ fun LogFoodDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("LOG FOOD", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black), color = PrimeGreen)
+                    Text("LOG FOOD", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black), color = PrimePrimary)
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = PrimeTextSecondary)
                     }
                 }
 
@@ -534,56 +347,50 @@ fun LogFoodDialog(
                 ) {
                     items(filteredFoods) { food ->
                         val isSelected = selectedFood?.id == food.id
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isSelected) PrimeGreen.copy(alpha = 0.2f) else MaterialTheme.colorScheme.surfaceVariant,
+                        Row(
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .background(if (isSelected) PrimePrimary.copy(alpha = 0.2f) else PrimeSurfaceVariant)
                                 .clickable { selectedFood = food }
+                                .padding(horizontal = 10.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column {
-                                    Text(food.name, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = MaterialTheme.colorScheme.onSurface)
-                                    Text(food.servingSize, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                                Text("${food.caloriesPerServing} kcal", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = PrimeGreen)
+                            Column {
+                                Text(food.name, style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold), color = PrimeTextPrimary)
+                                Text(food.servingSize, style = MaterialTheme.typography.labelSmall, color = PrimeTextSecondary)
                             }
+                            Text("${food.caloriesPerServing} kcal", style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold), color = PrimePrimary)
                         }
                     }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Row(
+                OutlinedTextField(
+                    value = portionInput,
+                    onValueChange = { portionInput = it },
+                    label = { Text("Portions") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = portionInput,
-                        onValueChange = { portionInput = it },
-                        label = { Text("Portions") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
+                    singleLine = true
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                FilledTonalButton(
-                    onClick = {
-                        val food = selectedFood ?: return@FilledTonalButton
-                        val portions = portionInput.toFloatOrNull() ?: 1.0f
-                        onLogFood(selectedMeal, food.name, portions, food.caloriesPerServing, food.proteinGrams, food.carbsGrams, food.fatGrams)
-                    },
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimeGreen, contentColor = Color.Black),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PrimePrimary)
+                        .clickable {
+                            val food = selectedFood ?: return@clickable
+                            val portions = portionInput.toFloatOrNull() ?: 1.0f
+                            onLogFood(selectedMeal, food.name, portions, food.caloriesPerServing, food.proteinGrams, food.carbsGrams, food.fatGrams)
+                        }
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("LOG MEAL", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    Text("LOG MEAL", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = PrimeBackground)
                 }
             }
         }
@@ -591,7 +398,7 @@ fun LogFoodDialog(
 }
 
 @Composable
-fun AddCustomFoodDialog(
+private fun AddCustomFoodDialog(
     onDismiss: () -> Unit,
     onSave: (String, String, Int, Float, Float, Float) -> Unit
 ) {
@@ -604,8 +411,8 @@ fun AddCustomFoodDialog(
 
     androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(0.dp),
+            color = PrimeSurface,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -616,9 +423,9 @@ fun AddCustomFoodDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("ADD CUSTOM FOOD", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black), color = PrimeGold)
+                    Text("ADD CUSTOM FOOD", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black), color = PrimePrimary)
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = PrimeTextSecondary)
                     }
                 }
 
@@ -640,16 +447,19 @@ fun AddCustomFoodDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                FilledTonalButton(
-                    onClick = {
-                        if (name.isNotBlank()) {
-                            onSave(name, servingSize, calories.toIntOrNull() ?: 0, protein.toFloatOrNull() ?: 0f, carbs.toFloatOrNull() ?: 0f, fat.toFloatOrNull() ?: 0f)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PrimePrimary)
+                        .clickable {
+                            if (name.isNotBlank()) {
+                                onSave(name, servingSize, calories.toIntOrNull() ?: 0, protein.toFloatOrNull() ?: 0f, carbs.toFloatOrNull() ?: 0f, fat.toFloatOrNull() ?: 0f)
+                            }
                         }
-                    },
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimeGold, contentColor = Color.Black),
-                    modifier = Modifier.fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("SAVE CUSTOM FOOD", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    Text("SAVE CUSTOM FOOD", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = PrimeBackground)
                 }
             }
         }

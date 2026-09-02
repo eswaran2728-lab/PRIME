@@ -12,14 +12,14 @@ val Typography = Typography(
         fontWeight = FontWeight.Black,
         fontSize = 34.sp,
         lineHeight = 40.sp,
-        letterSpacing = (-0.5).sp
+        letterSpacing = (-1).sp
     ),
     displayMedium = TextStyle(
         fontFamily = FontFamily.SansSerif,
         fontWeight = FontWeight.ExtraBold,
         fontSize = 28.sp,
         lineHeight = 34.sp,
-        letterSpacing = (-0.25).sp
+        letterSpacing = (-0.8).sp
     ),
     headlineLarge = TextStyle(
         fontFamily = FontFamily.SansSerif,

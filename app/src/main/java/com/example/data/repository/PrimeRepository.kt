@@ -59,6 +59,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
@@ -96,6 +97,17 @@ class PrimeRepository(
 
     fun getTodayDateString(): String {
         return SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    }
+
+    /** Returns the last [n] calendar dates as yyyy-MM-dd strings, most recent (today) first. */
+    fun getLastNDateStrings(n: Int): List<String> {
+        val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+        val cal = Calendar.getInstance()
+        return (0 until n).map { offset ->
+            val c = cal.clone() as Calendar
+            c.add(Calendar.DAY_OF_YEAR, -offset)
+            fmt.format(c.time)
+        }
     }
 
     // Profile & Streak
@@ -171,6 +183,8 @@ class PrimeRepository(
 
     fun getWorkoutSession(sessionId: Long): Flow<WorkoutSessionEntity?> = workoutDao.getSessionById(sessionId)
     fun getWorkoutSets(sessionId: Long): Flow<List<WorkoutSetEntity>> = workoutDao.getSetsForSession(sessionId)
+    fun getWorkoutSessionsForDate(date: String = getTodayDateString()): Flow<List<WorkoutSessionEntity>> =
+        workoutDao.getSessionsForDate(date)
 
     suspend fun createWorkoutSession(templateName: String = "Freestyle Workout", templateId: Long? = null, date: String = getTodayDateString()): Long {
         val session = WorkoutSessionEntity(templateName = templateName, templateId = templateId, date = date, startTime = System.currentTimeMillis())
@@ -317,6 +331,8 @@ class PrimeRepository(
     val allActiveHabits: Flow<List<HabitEntity>> = habitDao.getAllActiveHabits()
     fun getTodayHabitLogs(date: String = getTodayDateString()): Flow<List<HabitLogEntity>> =
         habitDao.getHabitLogsForDate(date)
+    fun getHabitLogsForDates(dates: List<String>): Flow<List<HabitLogEntity>> =
+        habitDao.getHabitLogsForDates(dates)
 
     suspend fun createHabit(
         name: String,

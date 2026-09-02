@@ -12,7 +12,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val PrimeSecondaryDark = Color(0xFFCCC2DC)
+private val PrimeSecondaryDark = Color(0xFF9EBBD8)
 
 private val DarkColorScheme = darkColorScheme(
     primary = PrimePrimary,

@@ -15,25 +15,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Code
-import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.LocalFireDepartment
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.RadioButtonUnchecked
-import androidx.compose.material.icons.filled.Repeat
-import androidx.compose.material.icons.filled.Shower
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,37 +32,44 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.data.local.entities.HabitEntity
 import com.example.data.local.entities.HabitLogEntity
-import com.example.ui.theme.PrimeBlue
-import com.example.ui.theme.PrimeGold
-import com.example.ui.theme.PrimeGreen
-import com.example.ui.theme.PrimeOrange
-import com.example.ui.theme.PrimePurple
+import com.example.ui.components.SquareTag
+import com.example.ui.components.SquareTagVariant
+import com.example.ui.theme.PrimeBackground
+import com.example.ui.theme.PrimePrimary
+import com.example.ui.theme.PrimeSurface
+import com.example.ui.theme.PrimeTextPrimary
+import com.example.ui.theme.PrimeTextSecondary
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HabitsScreen(
     habits: List<HabitEntity>,
     habitLogs: List<HabitLogEntity>,
+    weekDates: List<String>,
+    weekHabitLogs: List<HabitLogEntity>,
     onToggleHabit: (Long, Boolean) -> Unit,
     onAddHabit: (String, String, String, String, String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showAddDialog by remember { mutableStateOf(false) }
-    val completedHabitIds = habitLogs.filter { it.isCompleted }.map { it.habitId }.toSet()
+    val completedTodayIds = habitLogs.filter { it.isCompleted }.map { it.habitId }.toSet()
+    val today = weekDates.firstOrNull()
+    val orderedDates = weekDates.asReversed() // oldest -> newest (today last)
 
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Spacer(modifier = Modifier.height(4.dp))
@@ -86,75 +78,20 @@ fun HabitsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = "DISCIPLINE & HABITS",
-                        style = MaterialTheme.typography.labelMedium.copy(
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.5.sp
-                        ),
-                        color = PrimeGold
-                    )
-                    Text(
-                        text = "Consistency is the bedrock of transformation.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                FilledTonalButton(
-                    onClick = { showAddDialog = true },
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimeGold, contentColor = Color.Black)
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("ADD", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold))
-                }
-            }
-        }
-
-        // Summary Progress
-        item {
-            val total = habits.size
-            val completed = habits.count { it.id in completedHabitIds }
-            val ratio = if (total > 0) completed.toFloat() / total else 0f
-
-            Card(
-                shape = RoundedCornerShape(18.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                modifier = Modifier.fillMaxWidth()
-            ) {
+                Text(
+                    text = "HABITS",
+                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black, letterSpacing = 1.5.sp),
+                    color = PrimePrimary
+                )
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .clickable { showAddDialog = true }
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
-                        Text(
-                            text = "$completed of $total Completed",
-                            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = if (completed == total && total > 0) "100% Execution — Perfect Discipline" else "Execute daily protocols",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (completed == total && total > 0) PrimeGreen else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    Surface(
-                        shape = CircleShape,
-                        color = PrimeGold.copy(alpha = 0.15f),
-                        modifier = Modifier.size(44.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "${(ratio * 100).toInt()}%",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Black),
-                                color = PrimeGold
-                            )
-                        }
-                    }
+                    Icon(Icons.Default.Add, contentDescription = null, tint = PrimePrimary, modifier = Modifier.size(14.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("ADD", style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold), color = PrimePrimary)
                 }
             }
         }
@@ -162,75 +99,50 @@ fun HabitsScreen(
         if (habits.isEmpty()) {
             item {
                 Text(
-                    text = "No habits defined. Tap + ADD to create your first habit protocol.",
+                    text = "No habits defined. Tap + ADD to create your first habit.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = PrimeTextSecondary
                 )
             }
         } else {
-            items(habits) { habit ->
-                val isCompleted = habit.id in completedHabitIds
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isCompleted) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.surface
-                    ),
+            items(habits, key = { it.id }) { habit ->
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onToggleHabit(habit.id, isCompleted) }
+                        .background(PrimeSurface)
+                        .padding(14.dp)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
+                        modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
+                        Text(
+                            text = habit.name,
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
+                            color = PrimeTextPrimary,
                             modifier = Modifier.weight(1f)
-                        ) {
-                            Icon(
-                                imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
-                                contentDescription = null,
-                                tint = if (isCompleted) PrimeGreen else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = habit.name,
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontWeight = if (isCompleted) FontWeight.Normal else FontWeight.Bold
-                                    ),
-                                    color = if (isCompleted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "${habit.category} · ${habit.frequency} · ${habit.reminderTime ?: "Daily"}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
+                        )
+                        SquareTag(text = "${habit.currentStreak} DAY STREAK", variant = SquareTagVariant.Accent)
+                    }
 
-                        if (habit.currentStreak > 0) {
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = PrimeOrange.copy(alpha = 0.15f)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = PrimeOrange, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = "${habit.currentStreak}d",
-                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                        color = PrimeOrange
-                                    )
-                                }
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        orderedDates.forEach { date ->
+                            val isToday = date == today
+                            val completed = if (isToday) {
+                                habit.id in completedTodayIds
+                            } else {
+                                weekHabitLogs.any { it.habitId == habit.id && it.date == date && it.isCompleted }
                             }
+                            DayCell(
+                                label = dayLetter(date),
+                                filled = completed,
+                                clickable = isToday,
+                                onClick = { onToggleHabit(habit.id, completed) },
+                                modifier = Modifier.weight(1f)
+                            )
                         }
                     }
                 }
@@ -251,20 +163,53 @@ fun HabitsScreen(
     }
 }
 
+private fun dayLetter(dateStr: String): String {
+    return try {
+        val date: Date = SimpleDateFormat("yyyy-MM-dd", Locale.US).parse(dateStr) ?: return "?"
+        SimpleDateFormat("EEE", Locale.US).format(date).take(1).uppercase(Locale.US)
+    } catch (e: Exception) {
+        "?"
+    }
+}
+
 @Composable
-fun AddHabitDialog(
+private fun DayCell(
+    label: String,
+    filled: Boolean,
+    clickable: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .then(if (clickable) Modifier.clickable { onClick() } else Modifier),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp), color = PrimeTextSecondary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(22.dp)
+                .background(if (filled) PrimePrimary else PrimeBackground)
+        )
+    }
+}
+
+@Composable
+private fun AddHabitDialog(
     onDismiss: () -> Unit,
     onSave: (String, String, String, String) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf("Health") }
     var reminder by remember { mutableStateOf("08:00") }
-    val categories = listOf("Health", "Fitness", "Focus", "Learning", "Discipline", "Mindset")
+    val categories = listOf("Health", "Fitness", "Focus")
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = RoundedCornerShape(20.dp),
-            color = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(0.dp),
+            color = PrimeSurface,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
@@ -275,9 +220,9 @@ fun AddHabitDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("CREATE HABIT", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black), color = PrimeGold)
+                    Text("CREATE HABIT", style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Black), color = PrimePrimary)
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Close", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Icon(Icons.Default.Close, contentDescription = "Close", tint = PrimeTextSecondary)
                     }
                 }
 
@@ -286,36 +231,29 @@ fun AddHabitDialog(
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Habit Protocol Name") },
-                    placeholder = { Text("e.g. 100 Pushups, Read 20 Mins") },
+                    label = { Text("Habit Name") },
+                    placeholder = { Text("e.g. Cold shower, Read 20 mins") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text("Category:", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Category:", style = MaterialTheme.typography.labelSmall, color = PrimeTextSecondary)
                 Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    categories.take(3).forEach { cat ->
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (category == cat) PrimeGold else MaterialTheme.colorScheme.surfaceVariant,
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    categories.forEach { cat ->
+                        Text(
+                            text = cat,
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = if (category == cat) PrimeBackground else PrimeTextPrimary,
+                            textAlign = TextAlign.Center,
                             modifier = Modifier
                                 .weight(1f)
+                                .background(if (category == cat) PrimePrimary else PrimeBackground)
                                 .clickable { category = cat }
-                        ) {
-                            Text(
-                                text = cat,
-                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                color = if (category == cat) Color.Black else MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(vertical = 8.dp),
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                            )
-                        }
+                                .padding(vertical = 8.dp)
+                        )
                     }
                 }
 
@@ -331,16 +269,19 @@ fun AddHabitDialog(
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                FilledTonalButton(
-                    onClick = {
-                        if (name.isNotBlank()) {
-                            onSave(name, category, "Daily", reminder)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(PrimePrimary)
+                        .clickable {
+                            if (name.isNotBlank()) {
+                                onSave(name, category, "Daily", reminder)
+                            }
                         }
-                    },
-                    colors = ButtonDefaults.filledTonalButtonColors(containerColor = PrimeGold, contentColor = Color.Black),
-                    modifier = Modifier.fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("ADD PROTOCOL", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                    Text("ADD HABIT", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold), color = PrimeBackground)
                 }
             }
         }
