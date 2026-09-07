@@ -12,13 +12,13 @@ import org.json.JSONObject
  * and structured food estimation.
  */
 class GeminiProvider(
-    private val apiKey: String = ""
+    private val apiKey: String = com.example.BuildConfig.GEMINI_API_KEY
 ) : AIProvider {
 
     override val providerName: String = "Gemini 3.5 Flash"
 
     override val isConfigured: Boolean
-        get() = apiKey.isNotBlank() && apiKey != "MY_GEMINI_API_KEY"
+        get() = apiKey.isNotBlank() && apiKey != "MY_GEMINI_API_KEY" && apiKey != "your_api_key_here"
 
     private val systemPrompt = """
         You are PRIME AI, the personal operating system coach for a single user dedicated to relentless self-mastery.

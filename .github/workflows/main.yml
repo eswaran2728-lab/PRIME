@@ -22,6 +22,21 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Prepare Build Environment
+        run: |
+          if [ ! -f .env.example ]; then
+            echo "GEMINI_API_KEY=placeholder" > .env.example
+          fi
+          if [ ! -f .env ]; then
+            cp .env.example .env 2>/dev/null || echo "GEMINI_API_KEY=placeholder" > .env
+          fi
+          if [ ! -f my-upload-key.jks ] && [ -z "$KEYSTORE_PATH" ]; then
+            keytool -genkeypair -v -keystore my-upload-key.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=PRIME, OU=AIStudio, O=Prime, L=Unknown, S=Unknown, C=US"
+            echo "STORE_PASSWORD=android" >> $GITHUB_ENV
+            echo "KEY_PASSWORD=android" >> $GITHUB_ENV
+            echo "KEYSTORE_PATH=$GITHUB_WORKSPACE/my-upload-key.jks" >> $GITHUB_ENV
+          fi
+
       - name: Build Debug APK & Release Bundle
         run: gradle :app:assembleDebug :app:bundleRelease --no-daemon --stacktrace
 
