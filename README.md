@@ -9,9 +9,10 @@
 
 ## 🔗 Quick Links
 
+- **Live Web App (GitHub Pages)**: [https://eswaran2728-lab.github.io/PRIME/](https://eswaran2728-lab.github.io/PRIME/)
 - **GitHub Repository**: [https://github.com/eswaran2728-lab/PRIME](https://github.com/eswaran2728-lab/PRIME)
 - **CI / Build Artifacts (APK & AAB)**: [https://github.com/eswaran2728-lab/PRIME/actions](https://github.com/eswaran2728-lab/PRIME/actions)
-- **Latest Workflow Runs**: [https://github.com/eswaran2728-lab/PRIME/actions/workflows/main.yml](https://github.com/eswaran2728-lab/PRIME/actions/workflows/main.yml)
+- **Deployment Pipelines**: [https://github.com/eswaran2728-lab/PRIME/actions/workflows/deploy_pages.yml](https://github.com/eswaran2728-lab/PRIME/actions/workflows/deploy_pages.yml)
 
 ---
 
