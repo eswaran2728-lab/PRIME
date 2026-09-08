@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRIME — Personal Operating System for Total Self-Mastery</title>
+  <meta name="description" content="PRIME is an offline-first personal operating system for workout, nutrition, habits, deep focus, stoic journaling, career, and daily self-mastery.">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app" class="app-layout">
+    
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-icon">⚡</div>
+          <div class="logo-text">
+            <span class="brand-title">PRIME</span>
+            <span class="brand-badge">PRO OS</span>
+          </div>
+        </div>
+        <button class="mobile-close-btn" id="closeSidebarBtn" aria-label="Close Navigation">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <!-- Prime Score Badge Widget in Sidebar -->
+      <div class="sidebar-score-widget" id="sidebarScoreWidget">
+        <div class="score-circle-mini">
+          <svg viewBox="0 0 36 36" class="circular-chart">
+            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+            <path class="circle-score" id="sidebarScoreArc" stroke-dasharray="88, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+          </svg>
+          <span class="score-val" id="sidebarScoreVal">88</span>
+        </div>
+        <div class="score-info">
+          <span class="score-label">PRIME SCORE</span>
+          <span class="score-rank" id="sidebarScoreRank">TITAN LEVEL</span>
+        </div>
+      </div>
+
+      <!-- Nav Links -->
+      <nav class="nav-menu">
+        <div class="nav-section-title">CORE PILLARS</div>
+        <a href="#dashboard" class="nav-item active" data-tab="dashboard">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Dashboard</span>
+        </a>
+        <a href="#today" class="nav-item" data-tab="today">
+          <i data-lucide="check-circle-2"></i>
+          <span>Today & Habits</span>
+          <span class="nav-badge" id="pendingHabitsBadge">3</span>
+        </a>
+        <a href="#workout" class="nav-item" data-tab="workout">
+          <i data-lucide="dumbbell"></i>
+          <span>Training & Sets</span>
+        </a>
+        <a href="#nutrition" class="nav-item" data-tab="nutrition">
+          <i data-lucide="apple"></i>
+          <span>Nutrition & Macros</span>
+        </a>
+        <a href="#focus" class="nav-item" data-tab="focus">
+          <i data-lucide="clock"></i>
+          <span>Deep Focus Protocol</span>
+        </a>
+        <a href="#mindset" class="nav-item" data-tab="mindset">
+          <i data-lucide="sparkles"></i>
+          <span>Stoic Mindset</span>
+        </a>
+
+        <div class="nav-section-title">GROWTH & WEALTH</div>
+        <a href="#career" class="nav-item" data-tab="career">
+          <i data-lucide="briefcase"></i>
+          <span>Career & Skills</span>
+        </a>
+        <a href="#finance" class="nav-item" data-tab="finance">
+          <i data-lucide="wallet"></i>
+          <span>Personal Finance</span>
+        </a>
+        <a href="#learning" class="nav-item" data-tab="learning">
+          <i data-lucide="book-open"></i>
+          <span>Learning & Books</span>
+        </a>
+        <a href="#ai-coach" class="nav-item" data-tab="ai-coach">
+          <i data-lucide="bot"></i>
+          <span>PRIME AI Coach</span>
+          <span class="nav-ai-glow">GEMINI</span>
+        </a>
+        <a href="#settings" class="nav-item" data-tab="settings">
+          <i data-lucide="settings"></i>
+          <span>Settings & Backup</span>
+        </a>
+      </nav>
+
+      <!-- App Download Card in Sidebar Footer -->
+      <div class="sidebar-footer">
+        <a href="https://github.com/eswaran2728-lab/PRIME/actions" target="_blank" rel="noopener" class="download-app-banner">
+          <div class="download-icon">
+            <i data-lucide="smartphone"></i>
+          </div>
+          <div class="download-text">
+            <span class="d-title">Native Android APK</span>
+            <span class="d-sub">Download Latest Build &rarr;</span>
+          </div>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-wrapper">
+      
+      <!-- Top Navbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle-btn" id="openSidebarBtn" aria-label="Open Navigation">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="page-breadcrumb">
+            <span class="crumb-dim">PRIME /</span>
+            <span class="crumb-active" id="currentScreenTitle">Dashboard</span>
+          </div>
+        </div>
+
+        <div class="topbar-center">
+          <div class="date-badge">
+            <i data-lucide="calendar"></i>
+            <span id="currentDateDisplay">Tuesday, Sep 8</span>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <!-- Streak Indicator -->
+          <div class="streak-pill" title="Current Daily Momentum Streak">
+            <span class="streak-flame">🔥</span>
+            <span class="streak-count" id="headerStreakCount">14</span>
+            <span class="streak-label">DAYS</span>
+          </div>
+
+          <!-- Fast Quick Action Button -->
+          <button class="btn btn-primary btn-sm btn-glow" id="quickActionBtn">
+            <i data-lucide="plus"></i>
+            <span>Log Fast</span>
+          </button>
+
+          <!-- GitHub Source Link -->
+          <a href="https://github.com/eswaran2728-lab/PRIME" target="_blank" rel="noopener" class="icon-btn" title="View Source on GitHub">
+            <i data-lucide="github"></i>
+          </a>
+        </div>
+      </header>
+
+      <!-- Dynamic Screen Container -->
+      <div class="content-scroll" id="mainContent">
+        
+        <!-- ================= DASHBOARD TAB ================= -->
+        <section id="tab-dashboard" class="tab-pane active">
+          
+          <!-- Hero Banner with Score and Key Stats -->
+          <div class="dashboard-hero">
+            <div class="hero-score-card">
+              <div class="hero-score-visual">
+                <svg viewBox="0 0 120 120" class="hero-circular-chart">
+                  <circle class="hero-circle-bg" cx="60" cy="60" r="50"/>
+                  <circle class="hero-circle-val" id="heroScoreRing" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="38"/>
+                </svg>
+                <div class="hero-score-content">
+                  <span class="hero-score-num" id="heroScoreVal">88</span>
+                  <span class="hero-score-label">/ 100</span>
+                </div>
+              </div>
+              <div class="hero-score-details">
+                <div class="hero-tag">DAILY PRIME READINESS</div>
+                <h2 class="hero-greeting" id="heroGreetingText">Prime Status: Peak Output</h2>
+                <p class="hero-sub">You have conquered 4 of 5 core discipline pillars today. Complete your evening reflection for a perfect 100.</p>
+                <div class="hero-actions">
+                  <button class="btn btn-outline btn-sm" id="viewScoreBreakdownBtn">
+                    <i data-lucide="info"></i>
+                    <span>Score Breakdown</span>
+                  </button>
+                  <button class="btn btn-accent btn-sm" id="syncGeminiAiBtn">
+                    <i data-lucide="sparkles"></i>
+                    <span>AI Coaching Insight</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pillars Grid Mini -->
+            <div class="pillars-grid">
+              <div class="pillar-card">
+                <div class="pillar-icon pillar-workout"><i data-lucide="dumbbell"></i></div>
+                <div class="pillar-info">
+                  <span class="pillar-title">Training</span>
+                  <span class="pillar-status text-emerald">Completed (Push A)</span>
+                </div>
+                <span class="pillar-points">20/20</span>
+              </div>
+              <div class="pillar-card">
+                <div class="pillar-icon pillar-nutrition"><i data-lucide="apple"></i></div>
+                <div class="pillar-info">
+                  <span class="pillar-title">Macros & Water</span>
+                  <span class="pillar-status text-emerald">2,450 kcal · 175g P</span>
+                </div>
+                <span class="pillar-points">20/20</span>
+              </div>
+              <div class="pillar-card">
+                <div class="pillar-icon pillar-focus"><i data-lucide="clock"></i></div>
+                <div class="pillar-info">
+                  <span class="pillar-title">Deep Focus</span>
+                  <span class="pillar-status text-emerald">140 mins logged</span>
+                </div>
+                <span class="pillar-points">20/20</span>
+              </div>
+              <div class="pillar-card">
+                <div class="pillar-icon pillar-sleep"><i data-lucide="moon"></i></div>
+                <div class="pillar-info">
+                  <span class="pillar-title">Sleep Recovery</span>
+                  <span class="pillar-status text-emerald">7.8 hrs · 88% Qual</span>
+                </div>
+                <span class="pillar-points">20/20</span>
+              </div>
+              <div class="pillar-card">
+                <div class="pillar-icon pillar-mindset"><i data-lucide="sparkles"></i></div>
+                <div class="pillar-info">
+                  <span class="pillar-title">Stoic Calibration</span>
+                  <span class="pillar-status text-amber">Evening Pending</span>
+                </div>
+                <span class="pillar-points">8/20</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Metrics Ribbon -->
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-head">
+                <span class="metric-label">CALORIES TARGET</span>
+                <i data-lucide="flame" class="text-amber"></i>
+              </div>
+              <div class="metric-val">2,450 <span class="metric-unit">/ 2,600 kcal</span></div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill fill-amber" style="width: 94%;"></div>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-head">
+                <span class="metric-label">PROTEIN TARGET</span>
+                <i data-lucide="beef" class="text-cyan"></i>
+              </div>
+              <div class="metric-val">175 <span class="metric-unit">/ 180 g</span></div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill fill-cyan" style="width: 97%;"></div>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-head">
+                <span class="metric-label">HYDRATION</span>
+                <i data-lucide="droplet" class="text-blue"></i>
+              </div>
+              <div class="metric-val">2,750 <span class="metric-unit">/ 3,500 ml</span></div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill fill-blue" style="width: 78%;"></div>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-head">
+                <span class="metric-label">DEEP WORK SPRINT</span>
+                <i data-lucide="timer" class="text-purple"></i>
+              </div>
+              <div class="metric-val">140 <span class="metric-unit">/ 180 min</span></div>
+              <div class="progress-bar-container">
+                <div class="progress-bar-fill fill-purple" style="width: 77%;"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Main Dashboard Split (Habits & Focus Protocol) -->
+          <div class="dashboard-split">
+            
+            <!-- Left: Today's High-Discipline Protocol -->
+            <div class="card glass-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <i data-lucide="check-square" class="text-primary"></i>
+                  <h3>Today's Non-Negotiable Protocol</h3>
+                </div>
+                <button class="btn btn-ghost btn-xs" id="addQuickTaskBtn">+ Add</button>
+              </div>
+              <div class="habits-list" id="dashboardHabitsList">
+                <!-- Loaded via JS -->
+              </div>
+            </div>
+
+            <!-- Right: Live Active Deep Focus Sprint -->
+            <div class="card glass-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <i data-lucide="zap" class="text-accent"></i>
+                  <h3>Deep Focus Protocol Sprint</h3>
+                </div>
+                <span class="badge badge-focus" id="focusStatusBadge">READY</span>
+              </div>
+              <div class="focus-timer-box">
+                <div class="timer-display" id="dashTimerDisplay">50:00</div>
+                <div class="timer-task" id="dashTimerTask">Target: High-Value Architecture & Code Sprint</div>
+                <div class="timer-controls">
+                  <button class="btn btn-primary" id="dashTimerStartBtn">
+                    <i data-lucide="play"></i>
+                    <span>Start Sprint</span>
+                  </button>
+                  <button class="btn btn-outline" id="dashTimerResetBtn">
+                    <i data-lucide="rotate-ccw"></i>
+                    <span>Reset</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- ================= TODAY & HABITS TAB ================= -->
+        <section id="tab-today" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Today's Discipline Checklist</h2>
+              <p class="text-muted">Master your daily micro-habits to reinforce elite cognitive and physical identity.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="createHabitModalBtn">
+              <i data-lucide="plus"></i>
+              <span>Create New Habit</span>
+            </button>
+          </div>
+
+          <div class="habits-grid-detailed" id="fullHabitsGrid">
+            <!-- Rendered by JS -->
+          </div>
+        </section>
+
+        <!-- ================= WORKOUT & TRAINING TAB ================= -->
+        <section id="tab-workout" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Training & Hypertrophy Engine</h2>
+              <p class="text-muted">Log live working sets, calculate volume load, and optimize progressive overload.</p>
+            </div>
+            <div class="header-btn-group">
+              <button class="btn btn-outline btn-sm" id="restTimerBtn">
+                <i data-lucide="timer"></i>
+                <span id="restTimerLabel">Rest: 90s</span>
+              </button>
+              <button class="btn btn-primary btn-sm" id="startWorkoutSessionBtn">
+                <i data-lucide="plus"></i>
+                <span>New Session</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Active Workout Logger Box -->
+          <div class="card glass-card mb-4">
+            <div class="card-header">
+              <div class="card-title-group">
+                <i data-lucide="dumbbell" class="text-primary"></i>
+                <h3 id="currentWorkoutTitle">Active Routine: Push Hypertrophy (A)</h3>
+              </div>
+              <span class="badge badge-success">IN PROGRESS</span>
+            </div>
+            
+            <div class="table-responsive">
+              <table class="data-table" id="workoutSetsTable">
+                <thead>
+                  <tr>
+                    <th>Exercise</th>
+                    <th>Set</th>
+                    <th>Weight (kg)</th>
+                    <th>Reps</th>
+                    <th>RPE</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="workoutSetsBody">
+                  <!-- Rendered by JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="workout-add-set-bar">
+              <input type="text" id="setExerciseInput" class="input-field" placeholder="Exercise name (e.g. Incline DB Press)">
+              <input type="number" id="setWeightInput" class="input-field w-80" placeholder="Kg" value="32">
+              <input type="number" id="setRepsInput" class="input-field w-80" placeholder="Reps" value="10">
+              <input type="number" id="setRpeInput" class="input-field w-80" placeholder="RPE" value="8.5" step="0.5">
+              <button class="btn btn-primary" id="addSetBtn">
+                <i data-lucide="plus"></i>
+                <span>Add Set</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= NUTRITION & MACROS TAB ================= -->
+        <section id="tab-nutrition" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Precision Nutrition & Fuel</h2>
+              <p class="text-muted">Track calories, protein, hydration, and leverage Gemini AI to estimate nutritional breakdowns.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="openLogFoodBtn">
+              <i data-lucide="plus"></i>
+              <span>Log Meal / Food</span>
+            </button>
+          </div>
+
+          <div class="nutrition-dashboard-grid">
+            <div class="card glass-card">
+              <h3>Fast Hydration Tracker</h3>
+              <div class="water-progress-display">
+                <div class="water-number" id="waterAmountText">2,750 <span class="unit">/ 3,500 ml</span></div>
+                <div class="water-buttons">
+                  <button class="btn btn-outline btn-sm" onclick="addWater(250)">+250 ml</button>
+                  <button class="btn btn-outline btn-sm" onclick="addWater(500)">+500 ml</button>
+                  <button class="btn btn-outline btn-sm" onclick="addWater(1000)">+1.0 L</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- AI Meal Estimator Box -->
+            <div class="card glass-card">
+              <div class="card-header">
+                <div class="card-title-group">
+                  <i data-lucide="sparkles" class="text-accent"></i>
+                  <h3>Gemini AI Food Estimator</h3>
+                </div>
+                <span class="badge badge-ai">NATURAL LANGUAGE</span>
+              </div>
+              <div class="ai-input-group">
+                <input type="text" id="aiFoodQuery" class="input-field" placeholder="e.g. 200g grilled salmon, 1 cup brown rice, 100g broccoli">
+                <button class="btn btn-accent" id="estimateFoodAiBtn">
+                  <i data-lucide="zap"></i>
+                  <span>Estimate</span>
+                </button>
+              </div>
+              <div id="aiFoodResultBox" class="ai-result-box hidden">
+                <div class="ai-result-stats" id="aiFoodStats"></div>
+                <button class="btn btn-primary btn-sm mt-2" id="logAiEstimatedMealBtn">Log This Meal</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass-card mt-4">
+            <h3>Today's Meals Logged</h3>
+            <div class="meals-list" id="todayMealsList">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= DEEP FOCUS PROTOCOL TAB ================= -->
+        <section id="tab-focus" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Deep Focus & Cognitive Output</h2>
+              <p class="text-muted">High-leverage work sprints. Eliminate dopamine distractions and protect flow state.</p>
+            </div>
+          </div>
+
+          <div class="focus-screen-container">
+            <div class="focus-timer-card">
+              <div class="focus-mode-selector">
+                <button class="btn btn-sm focus-mode-btn active" data-time="50" data-mode="Deep Work">Deep Work (50m)</button>
+                <button class="btn btn-sm focus-mode-btn" data-time="25" data-mode="Pomodoro">Pomodoro (25m)</button>
+                <button class="btn btn-sm focus-mode-btn" data-time="90" data-mode="Flow State">Flow State (90m)</button>
+              </div>
+
+              <div class="big-timer" id="fullTimerDisplay">50:00</div>
+              
+              <div class="focus-task-input-wrap">
+                <input type="text" id="focusSessionTaskInput" class="input-field" placeholder="What high-value objective are you conquering?">
+              </div>
+
+              <div class="timer-controls-big">
+                <button class="btn btn-primary btn-lg" id="fullTimerToggleBtn">
+                  <i data-lucide="play"></i>
+                  <span>Begin Sprint</span>
+                </button>
+                <button class="btn btn-outline" id="fullTimerResetBtn">Reset</button>
+                <button class="btn btn-ghost text-rose" id="logDistractionBtn">+ Distraction (+1)</button>
+              </div>
+
+              <div class="distraction-counter-text">
+                Distractions Logged: <strong id="distractionCountVal">0</strong>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= STOIC MINDSET & JOURNAL TAB ================= -->
+        <section id="tab-mindset" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Stoic Mindset & Journal Calibration</h2>
+              <p class="text-muted">Master your inner fortress. Measure emotional control, clear mental fog, and log reflections.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="saveJournalBtn">
+              <i data-lucide="save"></i>
+              <span>Save Journal</span>
+            </button>
+          </div>
+
+          <div class="mindset-grid">
+            <div class="card glass-card">
+              <h3>Internal State Calibration</h3>
+              <div class="slider-group">
+                <div class="slider-label"><span>Mood & Equanimity</span> <strong id="moodVal">8/10</strong></div>
+                <input type="range" id="moodSlider" min="1" max="10" value="8" class="range-slider">
+              </div>
+              <div class="slider-group">
+                <div class="slider-label"><span>Physical Energy</span> <strong id="energyVal">9/10</strong></div>
+                <input type="range" id="energySlider" min="1" max="10" value="9" class="range-slider">
+              </div>
+              <div class="slider-group">
+                <div class="slider-label"><span>Mental Clarity & Focus</span> <strong id="clarityVal">8/10</strong></div>
+                <input type="range" id="claritySlider" min="1" max="10" value="8" class="range-slider">
+              </div>
+            </div>
+
+            <div class="card glass-card">
+              <h3>Evening Reflection Prompts</h3>
+              <div class="journal-prompt-item">
+                <label>1. Major accomplishments & key wins conquered today:</label>
+                <textarea id="journalWins" class="textarea-field" rows="2" placeholder="Shipped core architecture, completed hypertrophy workout..."></textarea>
+              </div>
+              <div class="journal-prompt-item mt-2">
+                <label>2. Obstacles encountered & how equanimity was maintained:</label>
+                <textarea id="journalObstacles" class="textarea-field" rows="2" placeholder="Faced unexpected friction, reframed it as an opportunity for discipline..."></textarea>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= CAREER & SKILLS TAB ================= -->
+        <section id="tab-career" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Career Trajectory & Skill Matrix</h2>
+              <p class="text-muted">Strategic milestones, compensation targets, and competency mastery ladders.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="addSkillModalBtn">+ Add Skill</button>
+          </div>
+
+          <div class="skills-grid" id="skillsGridContainer">
+            <!-- Rendered by JS -->
+          </div>
+        </section>
+
+        <!-- ================= PERSONAL FINANCE TAB ================= -->
+        <section id="tab-finance" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Personal Finance & Wealth Accumulation</h2>
+              <p class="text-muted">Track monthly cash flow, capital allocation, and milestone targets.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="addTransactionModalBtn">+ New Transaction</button>
+          </div>
+
+          <div class="finance-overview-grid">
+            <div class="card glass-card stat-highlight">
+              <span class="stat-sub">TOTAL NET INFLOW (THIS MONTH)</span>
+              <div class="stat-num text-emerald" id="monthlyNetCash">+$8,450.00</div>
+            </div>
+            <div class="card glass-card stat-highlight">
+              <span class="stat-sub">EMERGENCY FUND MILESTONE</span>
+              <div class="stat-num text-cyan">$30,000 / $30,000 (100%)</div>
+            </div>
+            <div class="card glass-card stat-highlight">
+              <span class="stat-sub">INVESTMENT ALLOCATION</span>
+              <div class="stat-num text-purple">$5,000 / mo (Target Hit)</div>
+            </div>
+          </div>
+
+          <div class="card glass-card mt-4">
+            <h3>Recent Ledger Entries</h3>
+            <div class="transactions-list" id="financeTransactionsList">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= LEARNING & BOOKS TAB ================= -->
+        <section id="tab-learning" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Learning Vault & Book Tracker</h2>
+              <p class="text-muted">High-signal knowledge acquisition, active reading logs, and course mastery.</p>
+            </div>
+            <button class="btn btn-primary btn-sm" id="addBookModalBtn">+ Add Book</button>
+          </div>
+
+          <div class="books-grid" id="booksGridContainer">
+            <!-- Rendered by JS -->
+          </div>
+        </section>
+
+        <!-- ================= PRIME AI COACH TAB ================= -->
+        <section id="tab-ai-coach" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>PRIME Gemini AI Coach</h2>
+              <p class="text-muted">Your dedicated intelligence partner for physical performance, deep work strategy, and daily reviews.</p>
+            </div>
+          </div>
+
+          <div class="ai-chat-layout card glass-card">
+            <div class="ai-chat-header">
+              <div class="ai-avatar">🤖</div>
+              <div class="ai-meta">
+                <span class="ai-name">PRIME Intelligence Unit (Gemini 2.5)</span>
+                <span class="ai-status">⚡ ONLINE & CONTEXT-AWARE</span>
+              </div>
+            </div>
+
+            <div class="ai-messages-container" id="aiChatMessages">
+              <div class="message-bubble message-assistant">
+                <strong>PRIME AI:</strong> Greetings. I have analyzed your daily metrics. Your training and macro adherence are at peak levels today (88 PRIME Score). What specific area shall we optimize next?
+              </div>
+            </div>
+
+            <div class="ai-chat-input-bar">
+              <input type="text" id="aiChatInput" class="input-field" placeholder="Ask for workout adjustments, diet optimization, or stoic perspective...">
+              <button class="btn btn-accent" id="sendAiMessageBtn">
+                <i data-lucide="send"></i>
+                <span>Consult</span>
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================= SETTINGS TAB ================= -->
+        <section id="tab-settings" class="tab-pane">
+          <div class="screen-header">
+            <div>
+              <h2>Settings & Data Management</h2>
+              <p class="text-muted">Configure profile, manage API keys, and backup your local PRIME database.</p>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="card glass-card">
+              <h3>Gemini AI API Configuration</h3>
+              <p class="text-muted text-sm mb-3">Add your Google Gemini API key to enable live cloud multimodal reasoning. (Offline rule-engine active by default).</p>
+              <div class="form-group">
+                <label>Gemini API Key</label>
+                <input type="password" id="geminiApiKeyInput" class="input-field" placeholder="AIzaSy...">
+              </div>
+              <button class="btn btn-primary btn-sm mt-2" id="saveApiKeyBtn">Save API Key</button>
+            </div>
+
+            <div class="card glass-card">
+              <h3>Backup & Data Export</h3>
+              <p class="text-muted text-sm mb-3">All your data is stored offline-first in your browser's local storage.</p>
+              <div class="btn-group-wrap">
+                <button class="btn btn-outline btn-sm" id="exportDataBtn">
+                  <i data-lucide="download"></i>
+                  <span>Export JSON</span>
+                </button>
+                <button class="btn btn-ghost btn-sm text-rose" id="resetDataBtn">
+                  <i data-lucide="trash-2"></i>
+                  <span>Reset Demo Data</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- Score Breakdown Modal -->
+  <div class="modal-backdrop hidden" id="scoreModal">
+    <div class="modal-box card glass-card">
+      <div class="modal-header">
+        <h3>Algorithmically Transparent PRIME Score</h3>
+        <button class="modal-close" id="closeScoreModalBtn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Your score is dynamically weighted across 5 pillars of peak performance:</p>
+        <div class="score-breakdown-row">
+          <span>🏋️ Training & Physical Output</span>
+          <strong>20 / 20 pts</strong>
+        </div>
+        <div class="score-breakdown-row">
+          <span>🥗 Precision Nutrition & Water</span>
+          <strong>20 / 20 pts</strong>
+        </div>
+        <div class="score-breakdown-row">
+          <span>🧠 Deep Focus Protocol</span>
+          <strong>20 / 20 pts</strong>
+        </div>
+        <div class="score-breakdown-row">
+          <span>🌙 Sleep & Recovery Engine</span>
+          <strong>20 / 20 pts</strong>
+        </div>
+        <div class="score-breakdown-row">
+          <span>🧘 Stoic Reflection & Journal</span>
+          <strong>8 / 20 pts</strong>
+        </div>
+        <div class="score-total-bar mt-3">
+          <span>TOTAL PRIME SCORE:</span>
+          <span class="text-primary font-bold">88 / 100</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="app.js"></script>
+</body>
+</html>
